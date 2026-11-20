@@ -263,8 +263,16 @@ class Kpis(
             )
         }
 
+    /** Only real guests in the deployed environment count: not the orders of end-to-end tests (trigger.kind test). */
     private fun keyResultLines(lines: List<Logline>) =
-        lines.filter { it.shortType == "keyresult.measured" && it.custom.path("environment").asText() == "lokaal" }
+        lines.filter {
+            it.shortType == "keyresult.measured" &&
+                it.custom.path("environment").asText() == "lokaal" &&
+                it.custom
+                    .path("trigger")
+                    .path("kind")
+                    .asText() == "guest"
+        }
 
     private fun keyResult(lines: List<Logline>): Pair<Int, Int> {
         val measured = keyResultLines(lines)
