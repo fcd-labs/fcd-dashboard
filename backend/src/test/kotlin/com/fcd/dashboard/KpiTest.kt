@@ -106,7 +106,9 @@ class KpiTest {
                     """{"gate":"security","afterSteps":"6-7","outcome":"open","reason":"","explain":""}""",
                     version = "0.2.0",
                 ) +
-                listOf(order("10:05", true), order("10:10", false), order("10:40", true))
+                listOf(order("10:05", true), order("10:10", false), order("10:40", true)) +
+                // An order of an end-to-end test: measured, but it does not count for the key result.
+                order("10:41", false).replace("\"kind\":\"guest\",\"name\":\"gast\"", "\"kind\":\"test\",\"name\":\"end-to-end test\"")
         for (l in lines) {
             val r =
                 client.post("/api/v1/events") {

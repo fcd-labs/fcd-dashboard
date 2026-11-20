@@ -4,6 +4,13 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-20
+
+### Opgelost
+- Key result: bestellingen van end-to-end tests telden mee; nu tellen alleen echte gasten (contract van de logregel 0.2.0, `trigger.kind` `test`).
+- Statusrapport: een deelproduct zonder containers (de Pipeline) heet "n.v.t." in plaats van "nog niet uitgerold".
+- De versheidscontrole voor Maven zag niets (door `-q`); nu met een reden per onderdeel. Gevonden: json-schema-validator een major-versie achter; afwijking EXP-002 tot 2026-12-31 (goedgekeurd door Johannes). EXP-001 geldt alleen nog voor de frontend.
+
 ## [0.2.0] - 2026-11-20
 
 ### Toegevoegd

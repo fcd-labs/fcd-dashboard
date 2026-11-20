@@ -37,9 +37,14 @@ class Report(
                             ?.containers
                             ?.entries
                             ?.joinToString(", ") { "${it.key} ${it.value}" }
-                    appendLine(
-                        "| ${p.name} / ${s.name} | uitgerold: ${s.deployed?.version ?: "nog niet"}${containers?.let { " ($it)" } ?: ""} |",
-                    )
+                    // A sub-product without containers (such as the Pipeline) is not deployed.
+                    val noContainers =
+                        s.deployed == null && s.lastRun
+                            ?.steps
+                            ?.firstOrNull { it.step == 8 }
+                            ?.outcome == "skipped"
+                    val deployed = if (noContainers) "n.v.t. (geen containers)" else s.deployed?.version ?: "nog niet"
+                    appendLine("| ${p.name} / ${s.name} | uitgerold: $deployed${containers?.let { " ($it)" } ?: ""} |")
                 }
             }
             appendLine()
