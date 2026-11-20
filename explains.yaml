@@ -2,3 +2,11 @@
 # An entry counts until its end date; after that the gate is strict again.
 #
 #
+
+- id: EXP-001
+  gate: security
+  rule: "versheid"
+  reason: "Frontend loopt een major-versie achter (Angular 21 -> 22, TypeScript 5.9 -> 7, vitest 4 -> 5, jsdom 28 -> 31). Zelfde afwijking als in sk-demo. Bijwerken na de demo (fcd-demo issue #1)."
+  approver: Johannes
+  approved: 2026-11-20
+  until: 2026-12-31
