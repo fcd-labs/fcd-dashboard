@@ -61,7 +61,6 @@ class ApplicationTest {
                     "unknown environment" to valid.replace("\"environment\":\"lokaal\"", "\"environment\":\"productie\""),
                     "timestamp not a date" to valid.replace(Regex("\"timestamp\":\"[^\"]*\""), "\"timestamp\":\"gisteren\""),
                     "commit time not a date" to valid.replace(Regex("\"time\":\"[^\"]*\""), "\"time\":\"gisteren\""),
-                    "experiment with a space" to valid.replace("\"experiment\":\"mvp0\"", "\"experiment\":\"mvp 0\""),
                     "NUL character" to valid.replace("\"pipelineName\":\"", "\"pipelineName\":\"a\\u0000"),
                 )
 
@@ -174,5 +173,17 @@ class ApplicationTest {
             assertTrue(text.contains("| bestellen | unit | 45 | 45 | 0 | 0 |"))
             val download = client.get("/api/v1/report?download=true")
             assertTrue(download.headers["Content-Disposition"]!!.contains("statusrapport-demo-mvp0-"))
+        }
+
+    @Test
+    fun `an experiment name with other characters never ends up unescaped in the download header`() =
+        testApplication {
+            setUp()
+            send(fixture("run-success.jsonl").first().replace("\"experiment\":\"mvp0\"", "\"experiment\":\"mvp 0\\u00e9\""))
+
+            val response = client.get("/api/v1/report?download=true")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertTrue(response.headers["Content-Disposition"]!!.contains("filename=\"statusrapport-demo-mvp_0_-"))
         }
 }
