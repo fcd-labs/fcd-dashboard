@@ -104,6 +104,7 @@ export interface ProductView {
 }
 
 export interface Overview {
+  showcase: string;
   experiment: string;
   experiments: string[];
   generatedAt: string;

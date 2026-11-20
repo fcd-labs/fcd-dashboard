@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Dashboard API
-  version: 0.2.0
+  version: 0.3.0
   license:
     name: MIT
     identifier: MIT
@@ -9,6 +9,7 @@ info:
     Contract between the frontend and the backend of the Dashboard (internal to the sub-product).
     Everything is computed from the log lines (contracts/logline.openapi.yaml) of one experiment.
     Without the parameter experiment: the experiment of the most recent log line.
+    Every showcase has its own Dashboard; the overview says which showcase.
 servers:
   - url: /
     description: The backend, reached through the frontend
@@ -16,6 +17,20 @@ tags:
   - name: dashboard
     description: What the Dashboard shows
 paths:
+  /api/v1/events:
+    get:
+      tags: [dashboard]
+      operationId: getEvents
+      summary: The log of an experiment, one log line per line (to keep in the showcase repository)
+      parameters:
+        - $ref: '#/components/parameters/experiment'
+      responses:
+        '200':
+          description: The log lines (NDJSON).
+          content:
+            application/x-ndjson:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/Problem' }
   /api/v1/overview:
     get:
       tags: [dashboard]
@@ -144,8 +159,9 @@ components:
     Status: { type: string, enum: [green, red, running, unknown] }
     Overview:
       type: object
-      required: [experiment, experiments, generatedAt, products]
+      required: [showcase, experiment, experiments, generatedAt, products]
       properties:
+        showcase: { type: string }
         experiment: { type: string }
         experiments: { type: array, items: { type: string } }
         generatedAt: { type: string, format: date-time }

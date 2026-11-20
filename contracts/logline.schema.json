@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/fcd-labs/fcd-demo/contracts/logline.schema.json",
   "title": "Logline",
-  "description": "One log line of fcd-demo: a CDEvent (CD Foundation, spec 0.4) with FCD fields in customData. Version 0.2.0.",
+  "description": "One log line of fcd-demo: a CDEvent (CD Foundation, spec 0.4) with FCD fields in customData. Version 0.3.0.",
   "type": "object",
   "required": ["context", "subject", "customData"],
   "properties": {
@@ -12,7 +12,7 @@
       "properties": {
         "version": { "type": "string", "description": "CDEvents spec version, e.g. 0.4.1" },
         "id": { "type": "string", "minLength": 1, "maxLength": 100 },
-        "source": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Who sends: fcd-demo-pipeline/<version> or <sub-product>/<version>" },
+        "source": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Who sends: fcd-pipeline/<version> or <sub-product>/<version>" },
         "type": {
           "type": "string",
           "enum": [
@@ -67,7 +67,7 @@
             "containers": { "type": "object", "additionalProperties": { "type": "string" } }
           }
         },
-        "showcase": { "type": "string", "enum": ["demo", "classic", "ideal"] },
+        "showcase": { "type": "string", "enum": ["demo", "classic", "ideal", "fcd"], "description": "Each showcase has its own Dashboard; fcd = the delivery of FCD itself" },
         "experiment": { "type": "string", "maxLength": 50, "description": "e.g. mvp0 (use letters, digits, . _ -); every experiment starts with an empty log" },
         "environment": { "type": "string", "enum": ["werkplek", "lokaal"], "description": "werkplek: before a push; lokaal: the deployed environment" },
         "releaseType": { "type": "string", "enum": ["planned", "emergency"] }

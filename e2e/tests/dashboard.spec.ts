@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 // Each run uses its own test experiment (test-...): it is never the default view of the Dashboard,
 // so the real log lines of the showcase stay as they are.
 const experiment = `test-e2e-${Date.now()}`;
+// The showcase of this Dashboard (every showcase has its own); read in beforeAll.
+let showcase = '';
 const run = `e2e-${randomUUID().slice(0, 8)}`;
 
 function line(type: string, subjectId: string, content: object, extra: object = {}) {
@@ -17,7 +19,7 @@ function line(type: string, subjectId: string, content: object, extra: object = 
       trigger: { kind: 'human', name: 'E2E' },
       product: 'e2e-product',
       subProduct: { name: 'e2e-sub', version: '1.2.3', containers: { 'e2e-frontend': '1.2.3' } },
-      showcase: 'demo',
+      showcase,
       experiment,
       environment: 'werkplek',
       releaseType: 'planned',
@@ -32,6 +34,7 @@ async function send(request: APIRequestContext, body: object) {
 }
 
 test.beforeAll(async ({ request }) => {
+  showcase = (await (await request.get('/api/v1/overview')).json()).showcase;
   await send(request, line('dev.cdevents.pipelinerun.started.0.2.0', run, { pipelineName: 'e2e', outcome: 'running' }));
   await send(request, line('dev.cdevents.taskrun.finished.0.2.0', 'unit-tests', { taskName: 'unit-tests', step: 2, title: 'Unittests', outcome: 'failed', reason: 'unit: 1 van 3 tests mislukt' }));
   await send(request, line('dev.cdevents.testsuiterun.finished.0.2.0', 'unit', { testType: 'unit', outcome: 'fail', tests: 3, passed: 2, failed: 1, skipped: 0, seconds: 1.5, failures: 'adds a dish' }));
@@ -85,6 +88,13 @@ test('shows the key result: two orders, one did not reach the bar', async ({ pag
   await page.getByRole('tab', { name: 'Key result' }).click();
   await expect(page.locator('.keyresult .tile .value')).toHaveText(['2', '1', '50%']);
   await expect(page.locator('.keyresult tbody tr').first()).toContainText('bar');
+});
+
+test('rejects a log line of another showcase', async ({ request }) => {
+  const other = showcase === 'classic' ? 'ideal' : 'classic';
+  const body = line('dev.cdevents.pipelinerun.started.0.2.0', run, { pipelineName: 'e2e', outcome: 'running' }, { showcase: other });
+  const response = await request.post('/api/v1/events', { data: body });
+  expect(response.status()).toBe(400);
 });
 
 test('rejects a log line that does not conform to the contract', async ({ request }) => {

@@ -115,6 +115,7 @@ data class ProductView(
 )
 
 data class Overview(
+    val showcase: String,
     val experiment: String,
     val experiments: List<String>,
     val generatedAt: Instant,
@@ -142,6 +143,8 @@ data class LoglineRow(
 class Views(
     private val store: EventStore,
     private val defaultExperiment: String,
+    /** The showcase of this Dashboard (from its environment); every showcase has its own Dashboard and store. */
+    val showcase: String = "",
 ) {
     fun experiment(requested: String?): String = requested?.takeIf { it.isNotBlank() } ?: store.latestExperiment() ?: defaultExperiment
 
@@ -157,7 +160,7 @@ class Views(
                     ProductView(product, worst(subs.map { it.status }), subs, totals(subs.flatMap { it.lastRun?.tests.orEmpty() }))
                 }.sortedBy { it.name }
         val experiments = store.experiments().filterNot { it.startsWith(TEST_EXPERIMENT_PREFIX) } + experiment
-        return Overview(experiment, experiments.distinct().sorted(), Instant.now(), products)
+        return Overview(showcase, experiment, experiments.distinct().sorted(), Instant.now(), products)
     }
 
     fun subProduct(

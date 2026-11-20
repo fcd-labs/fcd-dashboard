@@ -35,7 +35,7 @@ fun main() {
             password = env("DB_PASSWORD"),
         )
     embeddedServer(Netty, port = env("PORT", "8080").toInt()) {
-        dashboard(store, env("DEFAULT_EXPERIMENT", "mvp0"))
+        dashboard(store, env("DEFAULT_EXPERIMENT", "mvp0"), env("SHOWCASE"))
     }.start(wait = true)
 }
 
@@ -48,9 +48,10 @@ private fun env(
 fun Application.dashboard(
     store: EventStore,
     defaultExperiment: String = "mvp0",
+    showcase: String = "",
 ) {
     val reader = LoglineReader()
-    val views = Views(store, defaultExperiment)
+    val views = Views(store, defaultExperiment, showcase)
     val kpis = Kpis(views, store)
     val report = Report(views, kpis)
     val log = LoggerFactory.getLogger("dashboard")
@@ -68,8 +69,21 @@ fun Application.dashboard(
         // Logline contract: receive one log line (idempotent on context.id).
         post("/api/v1/events") {
             val line = reader.read(call.receiveLimitedJson())
+            // Every showcase has its own Dashboard and store: a log line of another showcase does not belong here.
+            val lineShowcase = line.custom.path("showcase").asText()
+            if (showcase.isNotBlank() && lineShowcase != showcase) {
+                throw InvalidLoglineException("This Dashboard is for showcase $showcase, not for $lineShowcase.")
+            }
             store.add(line)
             call.respondText("", status = HttpStatusCode.Accepted)
+        }
+        // The log of an experiment as it was received (one log line per line), to keep it in the showcase repository.
+        get("/api/v1/events") {
+            val lines = store.all(views.experiment(call.experimentParam()))
+            call.respondText(
+                lines.joinToString("") { Json.mapper.writeValueAsString(it.payload) + "\n" },
+                ContentType.parse("application/x-ndjson"),
+            )
         }
         get("/api/v1/overview") {
             call.respond(views.overview(call.experimentParam()))
@@ -110,7 +124,7 @@ fun Application.dashboard(
             if (download) {
                 // Only safe characters in a header value.
                 val safe = views.experiment(experiment).replace(Regex("[^A-Za-z0-9._-]"), "_")
-                val name = "statusrapport-demo-$safe-${java.time.LocalDate.now(java.time.ZoneOffset.UTC)}.md"
+                val name = "statusrapport-${showcase.ifBlank { "showcase" }}-$safe-${java.time.LocalDate.now(java.time.ZoneOffset.UTC)}.md"
                 call.response.headers.append("Content-Disposition", "attachment; filename=\"$name\"")
             }
             call.respondText(text, ContentType.parse("text/markdown; charset=utf-8"))

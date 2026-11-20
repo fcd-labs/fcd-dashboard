@@ -4,6 +4,18 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-20
+
+### Gewijzigd
+- Deelproduct van het product FCD (was fcd-demo), voor alle showcases. Repository `fcd-dashboard`.
+- Geen showcase meer in de code: de showcase komt uit de omgeving (`SHOWCASE`); titel, overzicht en statusrapport noemen hem.
+- Een Dashboard weigert logregels van een andere showcase (eigen store per showcase).
+- Het contract van de logregel staat nu hier (0.3.0: showcase `fcd` voor de levering van FCD zelf).
+- Poort uit de configuratie van de showcase.
+
+### Toegevoegd
+- `GET /api/v1/events?experiment=…`: de log van een experiment (NDJSON), voor de showcase-repository.
+
 ## [0.2.1] - 2026-11-20
 
 ### Opgelost
