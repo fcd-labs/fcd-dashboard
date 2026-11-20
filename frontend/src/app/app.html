@@ -1,7 +1,9 @@
 <header class="top">
   <div>
-    <h1>FCD Demo – Dashboard</h1>
-    <p class="sub">Showcase Demo · de cirkel rond: proces en gebruiker</p>
+    <h1>FCD – Dashboard</h1>
+    <p class="sub">
+      Showcase {{ overview()?.showcase || '…' }} · de cirkel rond: proces en gebruiker
+    </p>
   </div>
   @if (overview(); as o) {
     <label class="experiment">

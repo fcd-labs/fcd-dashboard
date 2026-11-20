@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
   title: Logline contract (fcd-demo Dashboard)
-  version: 0.2.0
+  version: 0.3.0
   license:
     name: MIT
     identifier: MIT
   description: |
-    Contract between the pipelines of sk-demo and fcd-demo (and the key-result measurement of
-    sk-demo) on one side, and the Dashboard on the other. The Dashboard receives log lines.
+    Contract between the Pipeline (fcd-pipeline) and the products of a showcase (such as the key-result
+    measurement of sk-demo) on one side, and the Dashboard of that showcase (fcd-dashboard) on the other. The Dashboard receives log lines.
     A log line is a CDEvent; the FCD fields are in customData. See logline.md.
 servers:
   - url: http://127.0.0.1:8070
@@ -31,7 +31,7 @@ paths:
         '202':
           description: Received. Sending the same context.id again has the same result (idempotent).
         '400':
-          description: The log line does not conform to the contract.
+          description: The log line does not conform to the contract, or belongs to another showcase.
           content:
             application/problem+json:
               schema:

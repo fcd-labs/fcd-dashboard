@@ -23,12 +23,12 @@ class Report(
         val time = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'").withZone(ZoneOffset.UTC).format(now)
 
         return buildString {
-            appendLine("# Statusrapport showcase Demo")
+            appendLine("# Statusrapport showcase ${overview.showcase.ifBlank { "?" }}")
             appendLine()
             appendLine("| | |")
             appendLine("|---|---|")
             appendLine("| Datum | $time |")
-            appendLine("| Showcase | demo |")
+            appendLine("| Showcase | ${overview.showcase} |")
             appendLine("| Experiment | ${overview.experiment} |")
             for (p in overview.products) {
                 for (s in p.subProducts) {
@@ -129,7 +129,9 @@ class Report(
                 }
             }
             appendLine()
-            appendLine("_Gemaakt door het Dashboard van fcd-demo uit de logregels van experiment ${overview.experiment}._")
+            appendLine(
+                "_Gemaakt door het Dashboard (fcd-dashboard) van showcase ${overview.showcase}, uit de logregels van experiment ${overview.experiment}._",
+            )
         }
     }
 

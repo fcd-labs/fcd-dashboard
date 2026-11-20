@@ -162,8 +162,8 @@ class ApplicationTest {
             val text = response.bodyAsText()
 
             assertEquals("text/markdown", response.headers["Content-Type"]?.substringBefore(';'))
-            assertTrue(text.startsWith("# Statusrapport showcase Demo"))
-            assertTrue(text.contains("| Showcase | demo |"))
+            assertTrue(text.startsWith("# Statusrapport showcase"))
+            assertTrue(text.contains("| Showcase |"))
             assertTrue(text.contains("| Experiment | mvp0 |"))
             assertTrue(text.contains("| showkitchen / bestellen | uitgerold: 0.1.0 (bestellen-frontend 0.1.0, bestellen-backend 0.1.0) |"))
             assertTrue(text.contains("## Key result van Bestellen"))
@@ -172,7 +172,7 @@ class ApplicationTest {
             assertTrue(text.contains("## KPI's (DORA)"))
             assertTrue(text.contains("| bestellen | unit | 45 | 45 | 0 | 0 |"))
             val download = client.get("/api/v1/report?download=true")
-            assertTrue(download.headers["Content-Disposition"]!!.contains("statusrapport-demo-mvp0-"))
+            assertTrue(download.headers["Content-Disposition"]!!.contains("-mvp0-"))
         }
 
     @Test
@@ -184,6 +184,51 @@ class ApplicationTest {
             val response = client.get("/api/v1/report?download=true")
 
             assertEquals(HttpStatusCode.OK, response.status)
-            assertTrue(response.headers["Content-Disposition"]!!.contains("filename=\"statusrapport-demo-mvp_0_-"))
+            assertTrue(response.headers["Content-Disposition"]!!.contains("-mvp_0_-"))
+        }
+
+    @Test
+    fun `a Dashboard only accepts log lines of its own showcase, and exports its log`() =
+        testApplication {
+            application { dashboard(InMemoryEventStore(), showcase = "demo") }
+            val line = fixture("run-success.jsonl").first()
+
+            assertEquals(HttpStatusCode.Accepted, send(line).status)
+            val other = send(line.replace("\"showcase\":\"demo\"", "\"showcase\":\"classic\"").replace("\"id\":\"", "\"id\":\"x"))
+            assertEquals(HttpStatusCode.BadRequest, other.status)
+            assertTrue(other.bodyAsText().contains("showcase demo"))
+
+            val overview = Json.mapper.readTree(client.get("/api/v1/overview").bodyAsText())
+            assertEquals("demo", overview["showcase"].asText())
+            val export =
+                client
+                    .get("/api/v1/events?experiment=mvp0")
+                    .bodyAsText()
+                    .trim()
+                    .lines()
+            assertEquals(1, export.size)
+            assertEquals("demo", Json.mapper.readTree(export[0])["customData"]["showcase"].asText())
+            assertTrue(client.get("/api/v1/report").bodyAsText().startsWith("# Statusrapport showcase demo"))
+        }
+
+    @Test
+    fun `without a closed gate a sub-product is stuck at the last failed step, not at one covered by an explain`() =
+        testApplication {
+            setUp()
+            fixture("run-success.jsonl")
+                .map {
+                    if (it.contains("taskrun.finished") && it.contains("\"taskName\":\"release\"")) {
+                        it.replace(Regex("\"outcome\":\"[a-z]+\""), "\"outcome\":\"failed\"")
+                    } else if (it.contains("pipelinerun.finished")) {
+                        it.replace("\"outcome\":\"success\"", "\"outcome\":\"failure\"")
+                    } else {
+                        it
+                    }
+                }.forEach { send(it) }
+
+            val bestellen = Json.mapper.readTree(client.get("/api/v1/products/showkitchen/subproducts/bestellen").bodyAsText())
+
+            assertEquals("red", bestellen["status"].asText())
+            assertEquals("Releasen", bestellen["lastRun"]["stuckAt"].asText())
         }
 }

@@ -20,6 +20,7 @@ const tests: TestView[] = [
 ];
 
 const overview: Overview = {
+  showcase: 'demo',
   experiment: 'mvp0',
   experiments: ['mvp0'],
   generatedAt: '2026-11-20T17:00:00Z',
@@ -213,6 +214,7 @@ describe('App (dashboard)', () => {
 
   it('shows per product which sub-products are red and where they are stuck', () => {
     flushAll();
+    expect(el.querySelector('.sub')?.textContent).toContain('Showcase demo');
     expect(el.querySelector('.product h2')?.textContent).toContain('showkitchen');
     expect(el.querySelector('.product .badge')?.textContent).toContain('rood');
     expect(el.querySelector('.stuck')?.textContent).toContain('bestellen: Securitygate dicht');
