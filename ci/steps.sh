@@ -3,7 +3,7 @@
 
 CI_COMPOSE_FILES="docker-compose.yml"
 CI_SUBPRODUCT_CONTAINERS="dashboard-frontend dashboard-backend dashboard-store"
-CI_OPENAPI="contracts/logline.openapi.yaml contracts/dashboard-api.openapi.yaml"
+# The contracts (and their compatibility rule) are in the configuration of the showcase (kind: Contract).
 CI_CONTRACT_TARGETS="logline=contracts/logline.openapi.yaml@http://dashboard-backend:8080
 dashboard-api=contracts/dashboard-api.openapi.yaml@http://dashboard-backend:8080"
 # Which contract checks run is in the configuration of the showcase (Step integration-tests).

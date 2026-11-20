@@ -64,7 +64,7 @@ data class Logline(
 class LoglineReader {
     private val schema: JsonSchema =
         JsonSchemaFactory
-            .getInstance(SpecVersion.VersionFlag.V202012)
+            .getInstance(SpecVersion.VersionFlag.V7)
             .getSchema(
                 javaClass.getResourceAsStream("/logline.schema.json") ?: error("logline.schema.json is missing"),
                 // Formats such as date-time are part of the contract: check them, not only annotate.

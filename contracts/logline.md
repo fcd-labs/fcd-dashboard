@@ -1,9 +1,9 @@
-# Contract: de logregel (versie 0.3.0)
+# Contract: de logregel (versie 0.3.1)
 
 De afspraak tussen de squads: de Pipeline (`fcd-pipeline`) en de producten van een showcase (zoals de meting van het key result in `sk-demo`) sturen logregels; het Dashboard van die showcase (`fcd-dashboard`) ontvangt ze. Elke showcase heeft een eigen Dashboard; een logregel van een andere showcase wordt geweigerd. Contract first: eerst dit contract wijzigen, met een nieuwe versie, dan de code.
 
 - **Formaat:** een CDEvent (CD Foundation, spec 0.4), JSON. De velden van FCD staan in `customData`.
-- **Interface:** `POST http://127.0.0.1:8070/api/v1/events`, zie [logline.openapi.yaml](logline.openapi.yaml) en het schema [logline.schema.json](logline.schema.json).
+- **Contract:** het JSON Schema [logline.schema.json](logline.schema.json) (draft-07, versie in `x-version`), geregistreerd in Apicurio Registry met de regel BACKWARD. Het eindpunt: `POST /api/v1/events` van het Dashboard van de showcase, zie [logline.openapi.yaml](logline.openapi.yaml).
 - **Idempotent:** dezelfde `context.id` nog eens sturen telt één keer.
 - **Geen Dashboard bereikbaar:** de Pipeline zet de logregel in een outbox (`~/.fcd/outbox.jsonl`) en stuurt hem later.
 
@@ -93,6 +93,7 @@ De afspraak tussen de squads: de Pipeline (`fcd-pipeline`) en de producten van e
 
 ## Versies
 
+- 0.3.1: JSON Schema draft-07 (het dialect waarvoor Apicurio Registry compatibiliteit controleert) en een eigen versieveld `x-version`; de inhoud is gelijk gebleven.
 - 0.3.0: showcase `fcd` (de levering van FCD zelf); elke showcase een eigen Dashboard. Het contract staat nu in fcd-dashboard (de aanbieder).
 - 0.2.0: `trigger.kind` `test` voor bestellingen van end-to-end tests; die tellen niet mee voor het key result. Uitbreiding, niet breaking.
 - 0.1.2: het patroon voor `experiment` is weer weg: dat was een breaking change (gevonden door de contracttest, oasdiff). Weer compatibel met 0.1.0.

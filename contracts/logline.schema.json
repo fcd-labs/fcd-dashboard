@@ -1,8 +1,9 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "x-version": "0.3.1",
   "$id": "https://github.com/fcd-labs/fcd-demo/contracts/logline.schema.json",
   "title": "Logline",
-  "description": "One log line of fcd-demo: a CDEvent (CD Foundation, spec 0.4) with FCD fields in customData. Version 0.3.0.",
+  "description": "One log line of fcd-demo: a CDEvent (CD Foundation, spec 0.4) with FCD fields in customData. The version of this contract is x-version (semantic versioning). JSON Schema draft-07: the dialect Apicurio Registry checks for compatibility.",
   "type": "object",
   "required": ["context", "subject", "customData"],
   "properties": {
