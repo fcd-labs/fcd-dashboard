@@ -61,6 +61,7 @@ class ApplicationTest {
                     "unknown environment" to valid.replace("\"environment\":\"lokaal\"", "\"environment\":\"productie\""),
                     "timestamp not a date" to valid.replace(Regex("\"timestamp\":\"[^\"]*\""), "\"timestamp\":\"gisteren\""),
                     "commit time not a date" to valid.replace(Regex("\"time\":\"[^\"]*\""), "\"time\":\"gisteren\""),
+                    "experiment with a space" to valid.replace("\"experiment\":\"mvp0\"", "\"experiment\":\"mvp 0\""),
                     "NUL character" to valid.replace("\"pipelineName\":\"", "\"pipelineName\":\"a\\u0000"),
                 )
 
@@ -133,6 +134,7 @@ class ApplicationTest {
             assertEquals(HttpStatusCode.BadRequest, client.get("/api/v1/overview?experiment=../x").status)
             assertEquals(HttpStatusCode.BadRequest, client.get("/api/v1/loglines?limit=1001").status)
             assertEquals(HttpStatusCode.BadRequest, client.get("/api/v1/loglines?limit=x").status)
+            assertEquals(HttpStatusCode.BadRequest, client.get("/api/v1/report?download=AAA").status)
             assertEquals(HttpStatusCode.BadRequest, client.get("/api/v1/products/Show%20Kitchen/subproducts/x").status)
             assertEquals(HttpStatusCode.NotFound, client.get("/api/v1/products/showkitchen/subproducts/bestellen").status)
         }
@@ -149,5 +151,28 @@ class ApplicationTest {
             assertEquals(listOf("mvp0"), overview["experiments"].map { it.asText() })
             val test = Json.mapper.readTree(client.get("/api/v1/overview?experiment=test-e2e").bodyAsText())
             assertEquals("test-e2e", test["experiment"].asText())
+        }
+
+    @Test
+    fun `makes a status report in Markdown with date, showcase, experiment, versions, gates, KPIs, tests and key result`() =
+        testApplication {
+            setUp()
+            fixture("run-success.jsonl").forEach { send(it) }
+
+            val response = client.get("/api/v1/report")
+            val text = response.bodyAsText()
+
+            assertEquals("text/markdown", response.headers["Content-Type"]?.substringBefore(';'))
+            assertTrue(text.startsWith("# Statusrapport showcase Demo"))
+            assertTrue(text.contains("| Showcase | demo |"))
+            assertTrue(text.contains("| Experiment | mvp0 |"))
+            assertTrue(text.contains("| showkitchen / bestellen | uitgerold: 0.1.0 (bestellen-frontend 0.1.0, bestellen-backend 0.1.0) |"))
+            assertTrue(text.contains("## Key result van Bestellen"))
+            assertTrue(text.contains("securitygate open"))
+            assertTrue(text.contains("EXP-001 (bestellen, securitygate)"))
+            assertTrue(text.contains("## KPI's (DORA)"))
+            assertTrue(text.contains("| bestellen | unit | 45 | 45 | 0 | 0 |"))
+            val download = client.get("/api/v1/report?download=true")
+            assertTrue(download.headers["Content-Disposition"]!!.contains("statusrapport-demo-mvp0-"))
         }
 }

@@ -2,9 +2,17 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { DashboardApi } from './dashboard-api';
-import { LoglineRow, Overview, ProductView, SubProductView, TestView } from './model';
+import {
+  KeyResultView,
+  KpiView,
+  LoglineRow,
+  Overview,
+  ProductView,
+  SubProductView,
+  TestView,
+} from './model';
 
-export type Tab = 'status' | 'tests' | 'loglines';
+export type Tab = 'status' | 'kpis' | 'keyresult' | 'tests' | 'loglines' | 'report';
 
 const REFRESH_MS = 5000;
 
@@ -65,6 +73,9 @@ export class App {
   protected readonly overview = signal<Overview | null>(null);
   protected readonly tests = signal<TestView[]>([]);
   protected readonly loglines = signal<LoglineRow[]>([]);
+  protected readonly kpis = signal<KpiView | null>(null);
+  protected readonly keyResult = signal<KeyResultView | null>(null);
+  protected readonly report = signal<string>('');
   protected readonly error = signal(false);
   /** Selected sub-product: "product/name". */
   protected readonly selected = signal<string | null>(null);
@@ -97,11 +108,17 @@ export class App {
       overview: this.api.overview(e),
       tests: this.api.tests(e),
       loglines: this.api.loglines(e),
+      kpis: this.api.kpis(e),
+      keyResult: this.api.keyResult(e),
+      report: this.api.report(e),
     }).subscribe({
       next: (r) => {
         this.overview.set(r.overview);
         this.tests.set(r.tests);
         this.loglines.set(r.loglines);
+        this.kpis.set(r.kpis);
+        this.keyResult.set(r.keyResult);
+        this.report.set(r.report);
         this.error.set(false);
       },
       error: () => this.error.set(true),
@@ -138,5 +155,36 @@ export class App {
       name,
       version,
     }));
+  }
+
+  protected percent(v: number | undefined | null): string {
+    return v === undefined || v === null ? '–' : `${Math.round(v * 10) / 10}%`;
+  }
+
+  protected rate(v: number | undefined | null): string {
+    return v === undefined || v === null ? '–' : `${Math.round(v * 1000) / 10}%`;
+  }
+
+  protected minutes(v: number | undefined | null): string {
+    if (v === undefined || v === null) return '–';
+    return v >= 120 ? `${Math.round((v / 60) * 10) / 10} u` : `${v} min`;
+  }
+
+  /** Width of a bar in the trend (0-100) relative to the largest value in that column. */
+  protected bar(value: number | undefined, column: (number | undefined)[]): number {
+    const max = Math.max(1, ...column.map((c) => c ?? 0));
+    return Math.round(((value ?? 0) / max) * 100);
+  }
+
+  protected column<K extends keyof KpiView['trend'][number]>(key: K): (number | undefined)[] {
+    return (this.kpis()?.trend ?? []).map((t) => t[key] as number | undefined);
+  }
+
+  protected reportUrl(): string {
+    return this.api.reportDownloadUrl(this.experiment());
+  }
+
+  protected print(): void {
+    globalThis.print?.();
   }
 }

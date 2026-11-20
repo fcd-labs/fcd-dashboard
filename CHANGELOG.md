@@ -4,6 +4,13 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-20
+
+### Toegevoegd
+- KPI's van FCD: de DORA-metrics per product en deelproduct (doorlooptijd van commit tot uitrol, uitrolfrequentie, percentage mislukte wijzigingen, hersteltijd), hoe vaak elke quality gate dichtvalt en waarom, het verloop per dag, de runduur van de pipeline en het aantal lopende afwijkingen.
+- Statusrapport in Markdown: de stand op één moment (datum, showcase, experiment, versies, pipelines en gates, KPI's, testresultaten, key result), te bekijken in het Dashboard, te bewaren als `.md` of af te drukken als PDF.
+- Het key result van de intent Bestellen: hoeveel bestellingen, hoeveel volledig aangekomen bij keuken, bar en kassa, en welke niet (en waar niet).
+
 ## [0.1.0] - 2026-11-20
 
 ### Toegevoegd

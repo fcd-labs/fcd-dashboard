@@ -19,11 +19,20 @@
   <button role="tab" [attr.aria-selected]="tab() === 'status'" (click)="tab.set('status')">
     Pipelines en gates
   </button>
+  <button role="tab" [attr.aria-selected]="tab() === 'kpis'" (click)="tab.set('kpis')">
+    KPI's
+  </button>
+  <button role="tab" [attr.aria-selected]="tab() === 'keyresult'" (click)="tab.set('keyresult')">
+    Key result
+  </button>
   <button role="tab" [attr.aria-selected]="tab() === 'tests'" (click)="tab.set('tests')">
     Testresultaten
   </button>
   <button role="tab" [attr.aria-selected]="tab() === 'loglines'" (click)="tab.set('loglines')">
     Logregels
+  </button>
+  <button role="tab" [attr.aria-selected]="tab() === 'report'" (click)="tab.set('report')">
+    Statusrapport
   </button>
 </nav>
 
@@ -241,6 +250,196 @@
       }
     }
 
+    @if (tab() === 'kpis') {
+      @if (kpis(); as k) {
+        <section class="kpis">
+          <div class="tiles">
+            <div class="tile">
+              <span class="label">Key result Bestellen</span
+              ><span class="value">{{ percent(k.keyResultPercent) }}</span>
+            </div>
+            <div class="tile">
+              <span class="label">Lopende afwijkingen</span
+              ><span class="value">{{ k.activeExplains }}</span>
+            </div>
+          </div>
+          <h2>DORA-metrics</h2>
+          <p class="small">
+            Alleen de uitgerolde omgeving (lokaal). Doorlooptijd: van commit tot uitrol. Mislukte
+            wijziging: een uitrol waar een noodpatch op volgt. Hersteltijd: van de uitrol van de
+            kapotte versie tot de uitrol van de noodpatch.
+          </p>
+          <table class="dora">
+            <thead>
+              <tr>
+                <th>Product / deelproduct</th>
+                <th class="num">Uitrols</th>
+                <th class="num">Per dag</th>
+                <th class="num">Doorlooptijd (mediaan)</th>
+                <th class="num">Mislukte wijzigingen</th>
+                <th class="num">Hersteltijd (mediaan)</th>
+                <th class="num">Runduur pipeline</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of k.products; track p.name) {
+                <tr class="sum">
+                  <td>{{ p.name }}</td>
+                  <td class="num">{{ p.dora.deployments }}</td>
+                  <td class="num">{{ p.dora.deploymentsPerDay }}</td>
+                  <td class="num">{{ minutes(p.dora.leadTimeMedianMinutes) }}</td>
+                  <td class="num">
+                    {{ rate(p.dora.changeFailureRate) }} ({{ p.dora.failedChanges }})
+                  </td>
+                  <td class="num">{{ minutes(p.dora.restoreMedianMinutes) }}</td>
+                  <td class="num">{{ p.dora.pipelineSecondsAverage ?? '–' }} s</td>
+                </tr>
+                @for (d of p.subProducts; track d.subProduct) {
+                  <tr>
+                    <td class="indent">{{ d.subProduct }}</td>
+                    <td class="num">{{ d.deployments }}</td>
+                    <td class="num">{{ d.deploymentsPerDay }}</td>
+                    <td class="num">{{ minutes(d.leadTimeMedianMinutes) }}</td>
+                    <td class="num">{{ rate(d.changeFailureRate) }} ({{ d.failedChanges }})</td>
+                    <td class="num">{{ minutes(d.restoreMedianMinutes) }}</td>
+                    <td class="num">{{ d.pipelineSecondsAverage ?? '–' }} s</td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+          <h2>Quality gates: hoe vaak dicht, en waarom</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Gate</th>
+                <th class="num">Beoordeeld</th>
+                <th class="num">Dicht</th>
+                <th>Redenen</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (g of k.gates; track g.gate) {
+                <tr>
+                  <td>{{ gateText[g.gate] ?? g.gate }}</td>
+                  <td class="num">{{ g.evaluated }}</td>
+                  <td class="num">{{ g.closed }}</td>
+                  <td>
+                    @for (r of g.reasons.slice(0, 4); track r.reason) {
+                      <div class="small">{{ r.count }}× {{ r.reason }}</div>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <h2>Verloop per dag</h2>
+          <table class="trend">
+            <thead>
+              <tr>
+                <th>Dag</th>
+                <th>Uitrols</th>
+                <th>Doorlooptijd</th>
+                <th>Runs (mislukt)</th>
+                <th>Gates dicht</th>
+                <th>Runduur</th>
+                <th>Key result</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of k.trend; track t.day) {
+                <tr>
+                  <td>{{ t.day }}</td>
+                  <td>
+                    <span
+                      class="bar"
+                      [style.width.%]="bar(t.deployments, column('deployments'))"
+                    ></span
+                    >{{ t.deployments }}
+                  </td>
+                  <td>
+                    <span
+                      class="bar"
+                      [style.width.%]="
+                        bar(t.leadTimeMedianMinutes, column('leadTimeMedianMinutes'))
+                      "
+                    ></span
+                    >{{ minutes(t.leadTimeMedianMinutes) }}
+                  </td>
+                  <td>{{ t.runs }} ({{ t.runsFailed }})</td>
+                  <td>
+                    <span
+                      class="bar red"
+                      [style.width.%]="bar(t.gatesClosed, column('gatesClosed'))"
+                    ></span
+                    >{{ t.gatesClosed }}
+                  </td>
+                  <td>{{ t.pipelineSecondsAverage ?? '–' }} s</td>
+                  <td>{{ percent(t.keyResultPercent) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+      }
+    }
+
+    @if (tab() === 'keyresult') {
+      @if (keyResult(); as kr) {
+        <section class="keyresult">
+          <p class="kr-statement">
+            Key result van de intent Bestellen: <strong>{{ kr.keyResult }}</strong
+            >.
+          </p>
+          <div class="tiles">
+            <div class="tile">
+              <span class="label">Bestellingen</span><span class="value">{{ kr.orders }}</span>
+            </div>
+            <div class="tile">
+              <span class="label">Volledig aangekomen</span
+              ><span class="value">{{ kr.complete }}</span>
+            </div>
+            <div
+              class="tile"
+              [class.bad]="kr.percent !== undefined && kr.percent !== null && kr.percent < 100"
+            >
+              <span class="label">Key result</span
+              ><span class="value">{{ percent(kr.percent) }}</span>
+            </div>
+          </div>
+          <h2>Niet volledig aangekomen</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Tijd</th>
+                <th>Bestelling</th>
+                <th class="num">Tafel</th>
+                <th>Niet aangekomen bij</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (o of kr.incomplete; track o.orderId) {
+                <tr data-outcome="incomplete">
+                  <td>{{ o.at | date: 'dd-MM HH:mm:ss' }}</td>
+                  <td class="small">{{ o.orderId }}</td>
+                  <td class="num">{{ o.tableNumber }}</td>
+                  <td>{{ o.missing.join(', ') }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4">Alle bestellingen zijn aangekomen.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <p class="small">
+            Gemeten in de uitgerolde omgeving (lokaal), per bestelling, door Bestellen zelf: op
+            basis van de ontvangstbevestiging van keuken, bar en kassa.
+          </p>
+        </section>
+      }
+    }
+
     @if (tab() === 'tests') {
       <section class="tests">
         @for (p of o.products; track p.name) {
@@ -299,6 +498,18 @@
             }
           </ul>
         }
+      </section>
+    }
+
+    @if (tab() === 'report') {
+      <section class="report">
+        <p class="actions">
+          <a class="button" [href]="reportUrl()">Bewaren als Markdown (.md)</a>
+          <button type="button" class="button" (click)="print()">
+            Afdrukken of bewaren als PDF
+          </button>
+        </p>
+        <pre class="report-text">{{ report() }}</pre>
       </section>
     }
 

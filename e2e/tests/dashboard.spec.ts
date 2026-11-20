@@ -37,6 +37,18 @@ test.beforeAll(async ({ request }) => {
   await send(request, line('dev.cdevents.testsuiterun.finished.0.2.0', 'unit', { testType: 'unit', outcome: 'fail', tests: 3, passed: 2, failed: 1, skipped: 0, seconds: 1.5, failures: 'adds a dish' }));
   await send(request, line('dev.cdeventsx.fcd-qualitygate.evaluated.0.1.0', 'code-gate', { gate: 'code', afterSteps: '1-3', outcome: 'closed', reason: 'unit: 1 van 3 tests mislukt', explain: '' }));
   await send(request, line('dev.cdevents.pipelinerun.finished.0.2.0', run, { pipelineName: 'e2e', outcome: 'failure', errors: 'code-gate dicht' }));
+  for (const bar of [true, false]) {
+    await send(
+      request,
+      line(
+        'dev.cdeventsx.fcd-keyresult.measured.0.1.0',
+        randomUUID(),
+        { keyResult: 'Elke bestelling komt aan', orderId: randomUUID(), tableNumber: 7, complete: bar,
+          receivers: { kitchen: { arrived: true }, bar: { arrived: bar }, 'cash-register': { arrived: true } } },
+        { run: '', environment: 'lokaal', trigger: { kind: 'guest', name: 'gast' } },
+      ),
+    );
+  }
 });
 
 test('shows a product that is stuck at a closed gate, and drills down to the sub-product', async ({ page }) => {
@@ -62,9 +74,17 @@ test('shows the test results and the failed test', async ({ page }) => {
 test('shows the log lines, newest first', async ({ page }) => {
   await page.goto(`/?experiment=${experiment}`);
   await page.getByRole('tab', { name: 'Logregels' }).click();
-  const first = page.locator('.loglines tbody tr').first();
-  await expect(first).toContainText('E2E');
-  await expect(first).toContainText('run');
+  const rows = page.locator('.loglines tbody tr');
+  // The key-result measurements were sent last, so they are on top.
+  await expect(rows.first()).toContainText('key result bestelling');
+  await expect(rows.filter({ hasText: 'E2E' }).filter({ hasText: 'codegate' }).or(rows.filter({ hasText: 'code-gate' })).first()).toBeVisible();
+});
+
+test('shows the key result: two orders, one did not reach the bar', async ({ page }) => {
+  await page.goto(`/?experiment=${experiment}`);
+  await page.getByRole('tab', { name: 'Key result' }).click();
+  await expect(page.locator('.keyresult .tile .value')).toHaveText(['2', '1', '50%']);
+  await expect(page.locator('.keyresult tbody tr').first()).toContainText('bar');
 });
 
 test('rejects a log line that does not conform to the contract', async ({ request }) => {

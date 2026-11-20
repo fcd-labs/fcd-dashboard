@@ -51,6 +51,8 @@ fun Application.dashboard(
 ) {
     val reader = LoglineReader()
     val views = Views(store, defaultExperiment)
+    val kpis = Kpis(views, store)
+    val report = Report(views, kpis)
     val log = LoggerFactory.getLogger("dashboard")
 
     install(ContentNegotiation) { register(ContentType.Application.Json, JacksonConverter(Json.mapper)) }
@@ -88,6 +90,30 @@ fun Application.dashboard(
             } else {
                 call.respond(view)
             }
+        }
+        get("/api/v1/kpis") {
+            call.respond(kpis.kpis(call.experimentParam()))
+        }
+        get("/api/v1/keyresult") {
+            call.respond(kpis.keyResult(call.experimentParam()))
+        }
+        // Status report as Markdown: to view in the Dashboard and to keep or share as a file.
+        get("/api/v1/report") {
+            val experiment = call.experimentParam()
+            val download =
+                when (call.request.queryParameters["download"]) {
+                    null, "false" -> false
+                    "true" -> true
+                    else -> throw InvalidLoglineException("download must be true or false.")
+                }
+            val text = report.markdown(experiment)
+            if (download) {
+                // Only safe characters in a header value.
+                val safe = views.experiment(experiment).replace(Regex("[^A-Za-z0-9._-]"), "_")
+                val name = "statusrapport-demo-$safe-${java.time.LocalDate.now(java.time.ZoneOffset.UTC)}.md"
+                call.response.headers.append("Content-Disposition", "attachment; filename=\"$name\"")
+            }
+            call.respondText(text, ContentType.parse("text/markdown; charset=utf-8"))
         }
         get("/api/v1/tests") {
             call.respond(views.tests(call.experimentParam()))

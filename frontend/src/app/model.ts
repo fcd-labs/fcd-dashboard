@@ -126,3 +126,48 @@ export interface LoglineRow {
   reason?: string;
   run: string;
 }
+
+export interface DoraView {
+  product: string;
+  subProduct: string;
+  deployments: number;
+  deploymentsPerDay: number;
+  leadTimeMedianMinutes?: number;
+  failedChanges: number;
+  changeFailureRate?: number;
+  restoreMedianMinutes?: number;
+  restores: { failedVersion: string; patchVersion: string; minutes: number; at: string }[];
+  pipelineSecondsAverage?: number;
+}
+
+export interface KpiView {
+  experiment: string;
+  products: { name: string; dora: DoraView; subProducts: DoraView[] }[];
+  gates: {
+    gate: string;
+    evaluated: number;
+    closed: number;
+    reasons: { reason: string; count: number }[];
+  }[];
+  trend: {
+    day: string;
+    deployments: number;
+    leadTimeMedianMinutes?: number;
+    runs: number;
+    runsFailed: number;
+    gatesClosed: number;
+    pipelineSecondsAverage?: number;
+    keyResultPercent?: number;
+  }[];
+  activeExplains: number;
+  keyResultPercent?: number;
+}
+
+export interface KeyResultView {
+  experiment: string;
+  keyResult: string;
+  orders: number;
+  complete: number;
+  percent?: number;
+  incomplete: { orderId: string; tableNumber: number; at: string; missing: string[] }[];
+}

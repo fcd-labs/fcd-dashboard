@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Dashboard API
-  version: 0.1.0
+  version: 0.2.0
   license:
     name: MIT
     identifier: MIT
@@ -47,6 +47,49 @@ paths:
               schema: { $ref: '#/components/schemas/SubProduct' }
         '400': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/kpis:
+    get:
+      tags: [dashboard]
+      operationId: getKpis
+      summary: KPIs of the way of working (DORA, gates, trend)
+      parameters:
+        - $ref: '#/components/parameters/experiment'
+      responses:
+        '200':
+          description: The KPIs.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Kpis' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /api/v1/keyresult:
+    get:
+      tags: [dashboard]
+      operationId: getKeyResult
+      summary: Key result of the intent Bestellen
+      parameters:
+        - $ref: '#/components/parameters/experiment'
+      responses:
+        '200':
+          description: The key result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KeyResult' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /api/v1/report:
+    get:
+      tags: [dashboard]
+      operationId: getReport
+      summary: Status report (Markdown)
+      parameters:
+        - $ref: '#/components/parameters/experiment'
+        - { name: download, in: query, required: false, schema: { type: string, enum: ['true', 'false'] } }
+      responses:
+        '200':
+          description: The status report.
+          content:
+            text/markdown:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/Problem' }
   /api/v1/tests:
     get:
       tags: [dashboard]
@@ -251,3 +294,92 @@ components:
         outcome: { type: string }
         reason: { type: string }
         run: { type: string }
+    Dora:
+      type: object
+      required: [product, subProduct, deployments, deploymentsPerDay, failedChanges, restores]
+      properties:
+        product: { type: string }
+        subProduct: { type: string }
+        deployments: { type: integer }
+        deploymentsPerDay: { type: number }
+        leadTimeMedianMinutes: { type: number }
+        failedChanges: { type: integer }
+        changeFailureRate: { type: number }
+        restoreMedianMinutes: { type: number }
+        restores:
+          type: array
+          items:
+            type: object
+            required: [failedVersion, patchVersion, minutes, at]
+            properties:
+              failedVersion: { type: string }
+              patchVersion: { type: string }
+              minutes: { type: number }
+              at: { type: string, format: date-time }
+        pipelineSecondsAverage: { type: number }
+    Kpis:
+      type: object
+      required: [experiment, products, gates, trend, activeExplains]
+      properties:
+        experiment: { type: string }
+        products:
+          type: array
+          items:
+            type: object
+            required: [name, dora, subProducts]
+            properties:
+              name: { type: string }
+              dora: { $ref: '#/components/schemas/Dora' }
+              subProducts: { type: array, items: { $ref: '#/components/schemas/Dora' } }
+        gates:
+          type: array
+          items:
+            type: object
+            required: [gate, evaluated, closed, reasons]
+            properties:
+              gate: { type: string }
+              evaluated: { type: integer }
+              closed: { type: integer }
+              reasons:
+                type: array
+                items:
+                  type: object
+                  required: [reason, count]
+                  properties:
+                    reason: { type: string }
+                    count: { type: integer }
+        trend:
+          type: array
+          items:
+            type: object
+            required: [day, deployments, runs, runsFailed, gatesClosed]
+            properties:
+              day: { type: string, format: date }
+              deployments: { type: integer }
+              leadTimeMedianMinutes: { type: number }
+              runs: { type: integer }
+              runsFailed: { type: integer }
+              gatesClosed: { type: integer }
+              pipelineSecondsAverage: { type: number }
+              keyResultPercent: { type: number }
+        activeExplains: { type: integer }
+        keyResultPercent: { type: number }
+    KeyResult:
+      type: object
+      required: [experiment, keyResult, orders, complete, incomplete]
+      properties:
+        experiment: { type: string }
+        keyResult: { type: string }
+        orders: { type: integer }
+        complete: { type: integer }
+        percent: { type: number }
+        incomplete:
+          type: array
+          items:
+            type: object
+            required: [orderId, tableNumber, at, missing]
+            properties:
+              orderId: { type: string }
+              tableNumber: { type: integer }
+              at: { type: string, format: date-time }
+              missing: { type: array, items: { type: string } }
