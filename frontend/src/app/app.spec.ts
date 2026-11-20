@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { App } from './app';
-import { LoglineRow, Overview, TestView } from './model';
+import { KeyResultView, KpiView, LoglineRow, Overview, TestView } from './model';
 
 const tests: TestView[] = [
   {
@@ -112,6 +112,72 @@ const loglines: LoglineRow[] = [
   },
 ];
 
+const kpis: KpiView = {
+  experiment: 'mvp0',
+  activeExplains: 1,
+  keyResultPercent: 66.7,
+  products: [
+    {
+      name: 'showkitchen',
+      dora: {
+        product: 'showkitchen',
+        subProduct: '',
+        deployments: 3,
+        deploymentsPerDay: 3,
+        leadTimeMedianMinutes: 10,
+        failedChanges: 1,
+        changeFailureRate: 1 / 3,
+        restoreMedianMinutes: 30,
+        restores: [],
+        pipelineSecondsAverage: 106,
+      },
+      subProducts: [
+        {
+          product: 'showkitchen',
+          subProduct: 'bestellen',
+          deployments: 3,
+          deploymentsPerDay: 3,
+          leadTimeMedianMinutes: 10,
+          failedChanges: 1,
+          changeFailureRate: 1 / 3,
+          restoreMedianMinutes: 30,
+          restores: [],
+          pipelineSecondsAverage: 106,
+        },
+      ],
+    },
+  ],
+  gates: [
+    {
+      gate: 'security',
+      evaluated: 2,
+      closed: 1,
+      reasons: [{ reason: 'bestellen: image x: kritieke of hoge kwetsbaarheid', count: 1 }],
+    },
+  ],
+  trend: [
+    {
+      day: '2026-11-26',
+      deployments: 3,
+      leadTimeMedianMinutes: 10,
+      runs: 4,
+      runsFailed: 1,
+      gatesClosed: 1,
+      pipelineSecondsAverage: 100,
+      keyResultPercent: 66.7,
+    },
+  ],
+};
+
+const keyResult: KeyResultView = {
+  experiment: 'mvp0',
+  keyResult: 'Elke bestelling van de gast komt aan bij keuken, bar en kassa',
+  orders: 3,
+  complete: 2,
+  percent: 66.7,
+  incomplete: [{ orderId: 'abc', tableNumber: 12, at: '2026-11-26T10:10:00Z', missing: ['bar'] }],
+};
+
 /** Text without whitespace: Angular drops whitespace between elements. */
 const flat = (t: string | null | undefined) => (t ?? '').replace(/\s+/g, '');
 
@@ -124,6 +190,11 @@ describe('App (dashboard)', () => {
     http.expectOne((r) => r.url === '/api/v1/overview').flush(o);
     http.expectOne((r) => r.url === '/api/v1/tests').flush(tests);
     http.expectOne((r) => r.url === '/api/v1/loglines').flush(loglines);
+    http.expectOne((r) => r.url === '/api/v1/kpis').flush(kpis);
+    http.expectOne((r) => r.url === '/api/v1/keyresult').flush(keyResult);
+    http
+      .expectOne((r) => r.url === '/api/v1/report')
+      .flush('# Statusrapport showcase Demo\n| Experiment | mvp0 |');
     fixture.detectChanges();
   }
 
@@ -167,8 +238,7 @@ describe('App (dashboard)', () => {
 
   it('shows test results per sub-product and type, summed per product, with the failed tests', () => {
     flushAll();
-    (Array.from(el.querySelectorAll('.tabs button'))[1] as HTMLElement).click();
-    fixture.detectChanges();
+    openTab('Testresultaten');
     const rows = Array.from(el.querySelectorAll('.tests tbody tr')).map((r) =>
       Array.from(r.querySelectorAll('td'))
         .map((td) => td.textContent?.trim())
@@ -179,10 +249,55 @@ describe('App (dashboard)', () => {
     expect(el.querySelector('.failures')?.textContent).toContain('rejects a null line');
   });
 
+  function openTab(name: string): void {
+    (
+      Array.from(el.querySelectorAll('.tabs button')).find(
+        (b) => b.textContent?.trim() === name,
+      ) as HTMLElement
+    ).click();
+    fixture.detectChanges();
+  }
+
+  it('shows the DORA metrics per product and sub-product, how often each gate closes, and the trend', () => {
+    flushAll();
+    openTab("KPI's");
+    const dora = Array.from(el.querySelectorAll('.dora tbody tr')).map((r) => flat(r.textContent));
+    expect(dora[0]).toContain(flat('showkitchen 3 3 10 min 33.3% (1) 30 min 106 s'));
+    expect(dora[1]).toContain('bestellen');
+    expect(el.querySelector('.kpis')?.textContent).toContain(
+      '1× bestellen: image x: kritieke of hoge kwetsbaarheid',
+    );
+    expect(flat(el.querySelector('.trend tbody tr')?.textContent)).toContain(
+      flat('2026-11-26 3 10 min 4 (1) 1 100 s 66.7%'),
+    );
+  });
+
+  it('shows the key result: orders, complete, and which orders did not arrive where', () => {
+    flushAll();
+    openTab('Key result');
+    const tiles = Array.from(el.querySelectorAll('.keyresult .tile .value')).map((t) =>
+      t.textContent?.trim(),
+    );
+    expect(tiles).toEqual(['3', '2', '66.7%']);
+    expect(flat(el.querySelector('.keyresult tbody tr')?.textContent)).toContain(
+      flat('abc 12 bar'),
+    );
+  });
+
+  it('shows the status report and offers it as a Markdown file', () => {
+    flushAll();
+    openTab('Statusrapport');
+    expect(el.querySelector('.report-text')?.textContent).toContain(
+      '# Statusrapport showcase Demo',
+    );
+    expect(el.querySelector('.report a')?.getAttribute('href')).toBe(
+      '/api/v1/report?download=true',
+    );
+  });
+
   it('shows the log lines: time, who, sub-product, action and outcome', () => {
     flushAll();
-    (Array.from(el.querySelectorAll('.tabs button'))[2] as HTMLElement).click();
-    fixture.detectChanges();
+    openTab('Logregels');
     const row = el.querySelector('.loglines tbody tr')?.textContent?.replace(/\s+/g, ' ');
     expect(row).toContain('Johannes (mens)');
     expect(row).toContain('bestellen 0.2.0');
