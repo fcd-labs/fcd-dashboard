@@ -4,6 +4,11 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-21
+
+### Gewijzigd
+- Contract van de logregel 0.3.1: JSON Schema draft-07 (het dialect waarvoor Apicurio Registry compatibiliteit controleert), met een eigen versieveld `x-version`. De inhoud is gelijk; de backend valideert met draft-07.
+
 ## [0.3.0] - 2026-11-20
 
 ### Gewijzigd
