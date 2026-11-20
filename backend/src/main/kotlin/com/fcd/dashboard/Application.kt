@@ -1,0 +1,133 @@
+package com.fcd.dashboard
+
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.jackson.JacksonConverter
+import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.install
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.request.contentLength
+import io.ktor.server.request.contentType
+import io.ktor.server.request.receiveChannel
+import io.ktor.server.response.respond
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
+import io.ktor.server.routing.routing
+import io.ktor.utils.io.readRemaining
+import kotlinx.io.readByteArray
+import org.slf4j.LoggerFactory
+
+/** Largest accepted log line. */
+private const val MAX_BODY_BYTES = 64 * 1024
+private val experimentPattern = Regex("^[A-Za-z0-9._-]{1,50}$")
+private val namePattern = Regex("^[a-z0-9-]{1,100}$")
+
+fun main() {
+    val store =
+        PostgresEventStore(
+            url = env("DB_URL"),
+            user = env("DB_USER"),
+            password = env("DB_PASSWORD"),
+        )
+    embeddedServer(Netty, port = env("PORT", "8080").toInt()) {
+        dashboard(store, env("DEFAULT_EXPERIMENT", "mvp0"))
+    }.start(wait = true)
+}
+
+private fun env(
+    name: String,
+    default: String? = null,
+): String = System.getenv(name) ?: default ?: error("Environment variable $name is not set")
+
+/** The Dashboard API, see contracts/dashboard-api.openapi.yaml and contracts/logline.openapi.yaml. */
+fun Application.dashboard(
+    store: EventStore,
+    defaultExperiment: String = "mvp0",
+) {
+    val reader = LoglineReader()
+    val views = Views(store, defaultExperiment)
+    val log = LoggerFactory.getLogger("dashboard")
+
+    install(ContentNegotiation) { register(ContentType.Application.Json, JacksonConverter(Json.mapper)) }
+    install(StatusPages) {
+        exception<InvalidLoglineException> { call, e -> call.respondProblem(HttpStatusCode.BadRequest, "Invalid request", e.message) }
+        exception<Throwable> { call, e ->
+            log.error("Unexpected error", e)
+            call.respondProblem(HttpStatusCode.InternalServerError, "Internal error", null)
+        }
+    }
+
+    routing {
+        // Logline contract: receive one log line (idempotent on context.id).
+        post("/api/v1/events") {
+            val line = reader.read(call.receiveLimitedJson())
+            store.add(line)
+            call.respondText("", status = HttpStatusCode.Accepted)
+        }
+        get("/api/v1/overview") {
+            call.respond(views.overview(call.experimentParam()))
+        }
+        get("/api/v1/products/{product}/subproducts/{name}") {
+            val product = call.parameters["product"].orEmpty()
+            val name = call.parameters["name"].orEmpty()
+            if (!namePattern.matches(product) ||
+                !namePattern.matches(name)
+            ) {
+                throw InvalidLoglineException("Invalid product or sub-product.")
+            }
+            val view = views.subProduct(call.experimentParam(), product, name)
+            if (view ==
+                null
+            ) {
+                call.respondProblem(HttpStatusCode.NotFound, "Not found", "No log lines for this sub-product.")
+            } else {
+                call.respond(view)
+            }
+        }
+        get("/api/v1/tests") {
+            call.respond(views.tests(call.experimentParam()))
+        }
+        get("/api/v1/loglines") {
+            val limit =
+                call.request.queryParameters["limit"]?.let {
+                    it.toIntOrNull()?.takeIf { n -> n in 1..1000 } ?: throw InvalidLoglineException("limit must be between 1 and 1000.")
+                } ?: 200
+            call.respond(views.loglines(call.experimentParam(), limit))
+        }
+    }
+}
+
+private fun ApplicationCall.experimentParam(): String? {
+    val e = request.queryParameters["experiment"] ?: return null
+    if (!experimentPattern.matches(e)) throw InvalidLoglineException("Invalid experiment.")
+    return e
+}
+
+private suspend fun ApplicationCall.receiveLimitedJson(): String {
+    if (!request.contentType().match(ContentType.Application.Json)) throw InvalidLoglineException("Content-Type must be application/json.")
+    if ((request.contentLength() ?: 0) > MAX_BODY_BYTES) throw InvalidLoglineException("Request body is too large.")
+    val bytes = receiveChannel().readRemaining(MAX_BODY_BYTES + 1L).readByteArray()
+    if (bytes.size > MAX_BODY_BYTES) throw InvalidLoglineException("Request body is too large.")
+    return bytes.decodeToString()
+}
+
+/** Error details according to RFC 9457, without internal details. */
+private suspend fun ApplicationCall.respondProblem(
+    status: HttpStatusCode,
+    title: String,
+    detail: String?,
+) {
+    val problem =
+        buildMap {
+            put("type", "about:blank")
+            put("title", title)
+            put("status", status.value)
+            if (detail != null) put("detail", detail)
+        }
+    respondText(Json.mapper.writeValueAsString(problem), ContentType.parse("application/problem+json"), status)
+}

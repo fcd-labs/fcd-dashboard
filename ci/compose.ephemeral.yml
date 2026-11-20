@@ -1,0 +1,4 @@
+# Override for short-lived environments of the pipeline: no host ports, so it runs next to the deployed Dashboard.
+services:
+  dashboard-frontend:
+    ports: !reset []

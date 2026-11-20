@@ -1,0 +1,253 @@
+openapi: 3.1.0
+info:
+  title: Dashboard API
+  version: 0.1.0
+  license:
+    name: MIT
+    identifier: MIT
+  description: |
+    Contract between the frontend and the backend of the Dashboard (internal to the sub-product).
+    Everything is computed from the log lines (contracts/logline.openapi.yaml) of one experiment.
+    Without the parameter experiment: the experiment of the most recent log line.
+servers:
+  - url: /
+    description: The backend, reached through the frontend
+tags:
+  - name: dashboard
+    description: What the Dashboard shows
+paths:
+  /api/v1/overview:
+    get:
+      tags: [dashboard]
+      operationId: getOverview
+      summary: Status per product and sub-product
+      parameters:
+        - $ref: '#/components/parameters/experiment'
+      responses:
+        '200':
+          description: The overview.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Overview' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /api/v1/products/{product}/subproducts/{name}:
+    get:
+      tags: [dashboard]
+      operationId: getSubProduct
+      summary: One sub-product with its runs
+      parameters:
+        - $ref: '#/components/parameters/experiment'
+        - { name: product, in: path, required: true, schema: { $ref: '#/components/schemas/Name' } }
+        - { name: name, in: path, required: true, schema: { $ref: '#/components/schemas/Name' } }
+      responses:
+        '200':
+          description: The sub-product.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubProduct' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /api/v1/tests:
+    get:
+      tags: [dashboard]
+      operationId: getTests
+      summary: Latest test results per sub-product and test type
+      parameters:
+        - $ref: '#/components/parameters/experiment'
+      responses:
+        '200':
+          description: Test results.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Test' } }
+        '400': { $ref: '#/components/responses/Problem' }
+  /api/v1/loglines:
+    get:
+      tags: [dashboard]
+      operationId: getLoglines
+      summary: The log lines, newest first
+      parameters:
+        - $ref: '#/components/parameters/experiment'
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 1000 } }
+      responses:
+        '200':
+          description: Log lines.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/LoglineRow' } }
+        '400': { $ref: '#/components/responses/Problem' }
+components:
+  parameters:
+    experiment:
+      name: experiment
+      in: query
+      required: false
+      schema: { type: string, pattern: '^[A-Za-z0-9._-]{1,50}$' }
+  responses:
+    Problem:
+      description: Error (RFC 9457), without internal details.
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            required: [title, status]
+            properties:
+              type: { type: string }
+              title: { type: string }
+              status: { type: integer }
+              detail: { type: string }
+  schemas:
+    Name: { type: string, pattern: '^[a-z0-9-]{1,100}$' }
+    Status: { type: string, enum: [green, red, running, unknown] }
+    Overview:
+      type: object
+      required: [experiment, experiments, generatedAt, products]
+      properties:
+        experiment: { type: string }
+        experiments: { type: array, items: { type: string } }
+        generatedAt: { type: string, format: date-time }
+        products: { type: array, items: { $ref: '#/components/schemas/Product' } }
+    Product:
+      type: object
+      required: [name, status, subProducts, tests]
+      properties:
+        name: { type: string }
+        status: { $ref: '#/components/schemas/Status' }
+        subProducts: { type: array, items: { $ref: '#/components/schemas/SubProduct' } }
+        tests: { type: array, items: { $ref: '#/components/schemas/TestTotals' } }
+    SubProduct:
+      type: object
+      required: [product, name, status, releases, explains, runs]
+      properties:
+        product: { type: string }
+        name: { type: string }
+        status: { $ref: '#/components/schemas/Status' }
+        lastRun: { $ref: '#/components/schemas/Run' }
+        deployed:
+          type: object
+          required: [version, containers, environment, at]
+          properties:
+            version: { type: string }
+            containers: { type: object, additionalProperties: { type: string } }
+            environment: { type: string }
+            at: { type: string, format: date-time }
+        releases:
+          type: array
+          items:
+            type: object
+            required: [tag, releaseType, at]
+            properties:
+              tag: { type: string }
+              releaseType: { type: string }
+              at: { type: string, format: date-time }
+        explains:
+          type: array
+          items:
+            type: object
+            required: [id, gate, lastUsed]
+            properties:
+              id: { type: string }
+              gate: { type: string }
+              rule: { type: string }
+              reason: { type: string }
+              approver: { type: string }
+              until: { type: string }
+              lastUsed: { type: string, format: date-time }
+        runs:
+          type: array
+          items:
+            type: object
+            required: [run, version, environment, started, outcome, triggerName]
+            properties:
+              run: { type: string }
+              version: { type: string }
+              environment: { type: string }
+              started: { type: string, format: date-time }
+              outcome: { type: string }
+              stuckAt: { type: string }
+              triggerName: { type: string }
+    Run:
+      type: object
+      required: [run, product, subProduct, version, environment, triggerKind, triggerName, releaseType, commit, started, outcome, steps, gates, tests]
+      properties:
+        run: { type: string }
+        product: { type: string }
+        subProduct: { type: string }
+        version: { type: string }
+        environment: { type: string }
+        triggerKind: { type: string }
+        triggerName: { type: string }
+        releaseType: { type: string }
+        commit: { type: string }
+        started: { type: string, format: date-time }
+        finished: { type: string, format: date-time }
+        outcome: { type: string, enum: [running, success, failure] }
+        seconds: { type: number }
+        stuckAt: { type: string }
+        warnings: { type: string }
+        steps:
+          type: array
+          items:
+            type: object
+            required: [step, name, title, outcome]
+            properties:
+              step: { type: integer }
+              name: { type: string }
+              title: { type: string }
+              outcome: { type: string, enum: [running, succeeded, failed, skipped] }
+              reason: { type: string }
+              seconds: { type: number }
+        gates:
+          type: array
+          items:
+            type: object
+            required: [gate, afterSteps, outcome, explains]
+            properties:
+              gate: { type: string }
+              afterSteps: { type: string }
+              outcome: { type: string, enum: [open, closed] }
+              reason: { type: string }
+              explains: { type: array, items: { type: string } }
+        tests: { type: array, items: { $ref: '#/components/schemas/Test' } }
+    Test:
+      type: object
+      required: [subProduct, testType, tests, passed, failed, skipped, seconds, run, at]
+      properties:
+        subProduct: { type: string }
+        testType: { type: string }
+        tests: { type: integer }
+        passed: { type: integer }
+        failed: { type: integer }
+        skipped: { type: integer }
+        seconds: { type: number }
+        failures: { type: string }
+        run: { type: string }
+        at: { type: string, format: date-time }
+    TestTotals:
+      type: object
+      required: [testType, tests, passed, failed, skipped, seconds]
+      properties:
+        testType: { type: string }
+        tests: { type: integer }
+        passed: { type: integer }
+        failed: { type: integer }
+        skipped: { type: integer }
+        seconds: { type: number }
+    LoglineRow:
+      type: object
+      required: [id, time, seconds, triggerKind, triggerName, product, subProduct, version, environment, type, action, outcome, run]
+      properties:
+        id: { type: string }
+        time: { type: string, format: date-time }
+        seconds: { type: number }
+        triggerKind: { type: string }
+        triggerName: { type: string }
+        product: { type: string }
+        subProduct: { type: string }
+        version: { type: string }
+        environment: { type: string }
+        type: { type: string }
+        action: { type: string }
+        outcome: { type: string }
+        reason: { type: string }
+        run: { type: string }
