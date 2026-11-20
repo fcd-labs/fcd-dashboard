@@ -274,7 +274,8 @@ class Views(
         val outcome = finishedLine?.content?.path("outcome")?.asText() ?: "running"
         val stuckAt =
             gates.firstOrNull { it.outcome == "closed" }?.let { "${it.gate}-gate" }
-                ?: steps.firstOrNull { it.outcome == "failed" }?.title?.takeIf { outcome == "failure" }
+                // Without a closed gate the run stopped at the last failed step (an earlier one can be covered by an explain).
+                ?: steps.lastOrNull { it.outcome == "failed" }?.title?.takeIf { outcome == "failure" }
         val c = first.custom
         return RunView(
             run = id,

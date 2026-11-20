@@ -16,6 +16,9 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 ### Toegevoegd
 - `GET /api/v1/events?experiment=…`: de log van een experiment (NDJSON), voor de showcase-repository.
 
+### Opgelost
+- "Vast bij": zonder dichte gate de laatste mislukte stap, niet een eerdere die door een afwijking was afgedekt.
+
 ## [0.2.1] - 2026-11-20
 
 ### Opgelost

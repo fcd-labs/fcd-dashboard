@@ -210,4 +210,25 @@ class ApplicationTest {
             assertEquals("demo", Json.mapper.readTree(export[0])["customData"]["showcase"].asText())
             assertTrue(client.get("/api/v1/report").bodyAsText().startsWith("# Statusrapport showcase demo"))
         }
+
+    @Test
+    fun `without a closed gate a sub-product is stuck at the last failed step, not at one covered by an explain`() =
+        testApplication {
+            setUp()
+            fixture("run-success.jsonl")
+                .map {
+                    if (it.contains("taskrun.finished") && it.contains("\"taskName\":\"release\"")) {
+                        it.replace(Regex("\"outcome\":\"[a-z]+\""), "\"outcome\":\"failed\"")
+                    } else if (it.contains("pipelinerun.finished")) {
+                        it.replace("\"outcome\":\"success\"", "\"outcome\":\"failure\"")
+                    } else {
+                        it
+                    }
+                }.forEach { send(it) }
+
+            val bestellen = Json.mapper.readTree(client.get("/api/v1/products/showkitchen/subproducts/bestellen").bodyAsText())
+
+            assertEquals("red", bestellen["status"].asText())
+            assertEquals("Releasen", bestellen["lastRun"]["stuckAt"].asText())
+        }
 }
