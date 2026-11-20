@@ -1,0 +1,65 @@
+# Sub-product Dashboard of fcd-demo: the unit of deployment. Always deployed as a whole.
+# Versions come from versions.env (the pipeline passes it with --env-file).
+# The database password is not in the code: fcd generates it once in ~/.fcd/secrets (DASHBOARD_DB_PASSWORD).
+name: fcd-demo-dashboard
+
+# Least privilege for every container.
+x-hardening: &hardening
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+services:
+  dashboard-frontend:
+    <<: *hardening
+    build:
+      context: ./frontend
+    image: fcd-demo/dashboard-frontend:${DASHBOARD_FRONTEND_VERSION:?run via fcd (versions.env)}
+    ports:
+      # The pipelines send their log lines here; only reachable from this machine.
+      - "127.0.0.1:8070:8080"
+    depends_on:
+      - dashboard-backend
+
+  dashboard-backend:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        APP_VERSION: ${DASHBOARD_BACKEND_VERSION:?run via fcd (versions.env)}
+    image: fcd-demo/dashboard-backend:${DASHBOARD_BACKEND_VERSION:?run via fcd (versions.env)}
+    # No host port: only reachable inside the Docker network (via the frontend).
+    environment:
+      DB_URL: jdbc:postgresql://dashboard-store:5432/dashboard
+      DB_USER: dashboard
+      DB_PASSWORD: ${DASHBOARD_DB_PASSWORD:?run via fcd (generated secret)}
+      DEFAULT_EXPERIMENT: mvp0
+    depends_on:
+      - dashboard-store
+
+  dashboard-store:
+    <<: *hardening
+    # Kader "Database: PostgreSQL". PostgreSQL License (open source). See store/Dockerfile.
+    build:
+      context: ./store
+    image: fcd-demo/dashboard-store:${DASHBOARD_STORE_VERSION:?run via fcd (versions.env)}
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    environment:
+      POSTGRES_DB: dashboard
+      POSTGRES_USER: dashboard
+      POSTGRES_PASSWORD: ${DASHBOARD_DB_PASSWORD:?run via fcd (generated secret)}
+    volumes:
+      # The log lines of all experiments are kept here.
+      - store:/var/lib/postgresql
+    # No host port.
+
+volumes:
+  store:

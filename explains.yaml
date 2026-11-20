@@ -1,0 +1,4 @@
+# Approved deviations (explain) on a quality gate threshold. Approver: the product owner.
+# An entry counts until its end date; after that the gate is strict again.
+#
+#

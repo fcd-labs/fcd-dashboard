@@ -1,0 +1,344 @@
+<header class="top">
+  <div>
+    <h1>FCD Demo – Dashboard</h1>
+    <p class="sub">Showcase Demo · de cirkel rond: proces en gebruiker</p>
+  </div>
+  @if (overview(); as o) {
+    <label class="experiment">
+      Experiment
+      <select (change)="chooseExperiment($any($event.target).value)" aria-label="Experiment">
+        @for (e of o.experiments; track e) {
+          <option [value]="e" [selected]="e === o.experiment">{{ e }}</option>
+        }
+      </select>
+    </label>
+  }
+</header>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" [attr.aria-selected]="tab() === 'status'" (click)="tab.set('status')">
+    Pipelines en gates
+  </button>
+  <button role="tab" [attr.aria-selected]="tab() === 'tests'" (click)="tab.set('tests')">
+    Testresultaten
+  </button>
+  <button role="tab" [attr.aria-selected]="tab() === 'loglines'" (click)="tab.set('loglines')">
+    Logregels
+  </button>
+</nav>
+
+@if (error()) {
+  <p class="error" role="alert">
+    Het Dashboard kan de gegevens nu niet ophalen. Het probeert het elke 5 seconden opnieuw.
+  </p>
+}
+
+<main>
+  @if (overview(); as o) {
+    @if (o.products.length === 0) {
+      <p class="empty">
+        Nog geen logregels in experiment {{ o.experiment }}. Start een pipeline met
+        <code>fcd ci</code>.
+      </p>
+    }
+
+    @if (tab() === 'status') {
+      <section class="products">
+        @for (p of o.products; track p.name) {
+          <article class="product" [attr.data-status]="p.status" [attr.data-product]="p.name">
+            <h2>
+              <span class="dot" [attr.data-status]="p.status"></span>
+              {{ p.name }}
+              <span class="badge" [attr.data-status]="p.status">{{ statusText[p.status] }}</span>
+            </h2>
+            @for (s of stuck(p); track s) {
+              <p class="stuck">Vast: {{ s }}</p>
+            }
+            <table class="subproducts">
+              <thead>
+                <tr>
+                  <th>Deelproduct</th>
+                  <th>Status</th>
+                  <th>Laatste run</th>
+                  <th>Gates</th>
+                  <th>Uitgerold</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of p.subProducts; track s.name) {
+                  <tr
+                    (click)="select(p, s)"
+                    [class.selected]="selected() === p.name + '/' + s.name"
+                    tabindex="0"
+                    (keydown.enter)="select(p, s)"
+                  >
+                    <td class="name">{{ s.name }}</td>
+                    <td>
+                      <span class="badge" [attr.data-status]="s.status">{{
+                        statusText[s.status]
+                      }}</span>
+                    </td>
+                    <td>
+                      @if (s.lastRun; as r) {
+                        {{ r.version }} · {{ r.environment }} ·
+                        {{ r.started | date: 'dd-MM HH:mm' }}
+                      }
+                    </td>
+                    <td class="gates">
+                      @for (g of s.lastRun?.gates ?? []; track g.gate) {
+                        <span
+                          class="gate"
+                          [attr.data-outcome]="g.outcome"
+                          [title]="g.reason ?? ''"
+                          >{{ gateText[g.gate] ?? g.gate }}</span
+                        >
+                      }
+                    </td>
+                    <td>{{ s.deployed?.version ?? '–' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <p class="totals">
+              Tests opgeteld:
+              @for (t of p.tests; track t.testType) {
+                <span
+                  >{{ testTypeText[t.testType] ?? t.testType }} {{ t.passed }}/{{ t.tests }}</span
+                >
+              }
+            </p>
+          </article>
+        }
+      </section>
+
+      @if (selectedSubProduct(); as s) {
+        <section class="detail" aria-label="Deelproduct">
+          <h2>{{ s.product }} / {{ s.name }}</h2>
+          @if (s.lastRun; as r) {
+            <p class="meta">
+              Run {{ r.run }} · versie {{ r.version }} · omgeving {{ r.environment }} ·
+              {{ triggerText[r.triggerKind] ?? r.triggerKind }}: {{ r.triggerName }} ·
+              {{ r.releaseType === 'emergency' ? 'noodpatch' : 'gepland' }} ·
+              <span
+                class="badge"
+                [attr.data-status]="
+                  r.outcome === 'success' ? 'green' : r.outcome === 'running' ? 'running' : 'red'
+                "
+                >{{ statusText[r.outcome] }}</span
+              >
+              @if (r.seconds !== undefined) {
+                · {{ r.seconds }} s
+              }
+            </p>
+            <ol class="steps">
+              @for (st of r.steps; track st.step) {
+                <li [attr.data-outcome]="st.outcome" [title]="st.reason ?? ''">
+                  <span class="n">{{ st.step }}</span>
+                  <span class="t">{{ st.title }}</span>
+                  <span class="o"
+                    >{{ statusText[st.outcome] }}
+                    @if (st.seconds) {
+                      · {{ st.seconds }} s
+                    }
+                  </span>
+                  @if (st.reason && st.outcome !== 'succeeded') {
+                    <span class="r">{{ st.reason }}</span>
+                  }
+                </li>
+              }
+            </ol>
+            <h3>Quality gates</h3>
+            <ul class="gatelist">
+              @for (g of r.gates; track g.gate) {
+                <li [attr.data-outcome]="g.outcome">
+                  <strong>{{ gateText[g.gate] ?? g.gate }}</strong> (na stap {{ g.afterSteps }}):
+                  {{ statusText[g.outcome] }}
+                  @if (g.reason) {
+                    – {{ g.reason }}
+                  }
+                </li>
+              }
+            </ul>
+            @if (r.warnings) {
+              <p class="warn">Waarschuwingen: {{ r.warnings }}</p>
+            }
+          }
+          <div class="cols">
+            <div>
+              <h3>Uitgerold</h3>
+              @if (s.deployed; as d) {
+                <p>
+                  {{ s.name }} {{ d.version }} op {{ d.environment }} ({{
+                    d.at | date: 'dd-MM HH:mm'
+                  }})
+                </p>
+                <ul>
+                  @for (c of containers(s); track c.name) {
+                    <li>{{ c.name }} {{ c.version }}</li>
+                  }
+                </ul>
+              } @else {
+                <p>Nog niet uitgerold door de Pipeline.</p>
+              }
+              <h3>Releases</h3>
+              <ul>
+                @for (rel of s.releases; track rel.tag) {
+                  <li>
+                    {{ rel.tag }} ·
+                    {{ rel.releaseType === 'emergency' ? 'noodpatch' : 'gepland' }} ·
+                    {{ rel.at | date: 'dd-MM HH:mm' }}
+                  </li>
+                } @empty {
+                  <li>Nog geen release.</li>
+                }
+              </ul>
+            </div>
+            <div>
+              <h3>Goedgekeurde afwijkingen</h3>
+              <ul>
+                @for (x of s.explains; track x.id) {
+                  <li>
+                    <strong>{{ x.id }}</strong> op de {{ gateText[x.gate] ?? x.gate }}
+                    @if (x.until) {
+                      · tot {{ x.until }}
+                    }
+                    @if (x.approver) {
+                      · goedgekeurd door {{ x.approver }}
+                    }
+                    @if (x.reason) {
+                      <br /><span class="small">{{ x.reason }}</span>
+                    }
+                  </li>
+                } @empty {
+                  <li>Geen.</li>
+                }
+              </ul>
+              <h3>Laatste runs</h3>
+              <ul class="runs">
+                @for (r of s.runs; track r.run) {
+                  <li>
+                    <span
+                      class="badge"
+                      [attr.data-status]="
+                        r.outcome === 'success'
+                          ? 'green'
+                          : r.outcome === 'running'
+                            ? 'running'
+                            : 'red'
+                      "
+                      >{{ statusText[r.outcome] }}</span
+                    >
+                    {{ r.started | date: 'dd-MM HH:mm' }} · {{ r.version }} · {{ r.environment }}
+                    @if (r.stuckAt) {
+                      · {{ stuckText(r.stuckAt) }}
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          </div>
+        </section>
+      }
+    }
+
+    @if (tab() === 'tests') {
+      <section class="tests">
+        @for (p of o.products; track p.name) {
+          <h2>{{ p.name }}</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Deelproduct</th>
+                <th>Soort</th>
+                <th class="num">Tests</th>
+                <th class="num">Geslaagd</th>
+                <th class="num">Mislukt</th>
+                <th class="num">Overgeslagen</th>
+                <th class="num">Duur (s)</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (s of p.subProducts; track s.name) {
+                @for (t of testsOf(s.name); track t.testType) {
+                  <tr [class.failed]="t.failed > 0">
+                    <td>{{ s.name }}</td>
+                    <td>{{ testTypeText[t.testType] ?? t.testType }}</td>
+                    <td class="num">{{ t.tests }}</td>
+                    <td class="num">{{ t.passed }}</td>
+                    <td class="num">{{ t.failed }}</td>
+                    <td class="num">{{ t.skipped }}</td>
+                    <td class="num">{{ t.seconds | number: '1.1-1' }}</td>
+                  </tr>
+                }
+              }
+              @for (t of p.tests; track t.testType) {
+                <tr class="sum">
+                  <td>opgeteld</td>
+                  <td>{{ testTypeText[t.testType] ?? t.testType }}</td>
+                  <td class="num">{{ t.tests }}</td>
+                  <td class="num">{{ t.passed }}</td>
+                  <td class="num">{{ t.failed }}</td>
+                  <td class="num">{{ t.skipped }}</td>
+                  <td class="num">{{ t.seconds | number: '1.1-1' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        @if (failedTests().length > 0) {
+          <h2>Mislukte tests</h2>
+          <ul class="failures">
+            @for (t of failedTests(); track t.subProduct + t.testType) {
+              <li>
+                <strong>{{ t.subProduct }} · {{ testTypeText[t.testType] ?? t.testType }}</strong
+                >: {{ t.failures }}
+                <span class="small"
+                  >(run {{ t.run }}; details in <code>.fcd/runs/{{ t.run }}/</code>)</span
+                >
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
+
+    @if (tab() === 'loglines') {
+      <section class="loglines">
+        <table>
+          <thead>
+            <tr>
+              <th>Tijd (UTC)</th>
+              <th class="num">Duur (s)</th>
+              <th>Wie</th>
+              <th>Deelproduct</th>
+              <th>Omgeving</th>
+              <th>Actie</th>
+              <th>Uitkomst</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of loglines(); track l.id) {
+              <tr [attr.data-outcome]="l.outcome">
+                <td>{{ l.time | date: 'dd-MM HH:mm:ss' : 'UTC' }}</td>
+                <td class="num">{{ l.seconds }}</td>
+                <td>
+                  {{ l.triggerName }}
+                  <span class="small">({{ triggerText[l.triggerKind] ?? l.triggerKind }})</span>
+                </td>
+                <td>{{ l.subProduct }} {{ l.version }}</td>
+                <td>{{ l.environment }}</td>
+                <td>{{ l.action }}</td>
+                <td>
+                  {{ statusText[l.outcome] ?? l.outcome }}
+                  @if (l.reason) {
+                    <span class="small">– {{ l.reason }}</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    }
+  }
+</main>

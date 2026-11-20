@@ -1,0 +1,4 @@
+.fcd/
+.DS_Store
+node_modules/
+target/
