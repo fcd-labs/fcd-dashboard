@@ -12,7 +12,7 @@ info:
     Every showcase has its own Dashboard; the overview says which showcase.
     The live view (/api/v1/live) pushes the state of the running pipelines with Server-Sent Events.
     The buttons of the product owner are commands (/api/v1/commands): the Dashboard keeps them, the Pipeline agent
-    claims and carries them out. The Dashboard never runs a pipeline itself. No login in mvp0 (approved explain):
+    claims and carries them out. The Dashboard never runs a pipeline itself. No login in mvp0 (explain proposed, fcd-demo#4):
     the name of the one who presses is the approver from the configuration.
 servers:
   - url: /

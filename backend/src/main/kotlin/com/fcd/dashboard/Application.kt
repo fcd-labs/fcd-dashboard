@@ -209,7 +209,7 @@ fun Application.dashboard(
                     kind = request.kind,
                     run = request.run?.takeIf { request.kind == CommandKinds.APPROVE_RELEASE },
                     save = request.save?.takeIf { request.kind == CommandKinds.DEMO_RESET },
-                    // No login in mvp0 (approved explain): the one who presses is the approver of the configuration.
+                    // No login in mvp0 (explain proposed, fcd-demo#4): the one who presses is the approver of the configuration.
                     requestedBy = config.controls.approver ?: "product owner",
                     requestedAt = java.time.Instant.now(),
                 )
