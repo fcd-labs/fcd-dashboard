@@ -64,7 +64,7 @@ class Report(
                 kr.incomplete
                     .take(
                         10,
-                    ).forEach { appendLine("- tafel ${it.tableNumber}, ${it.at}: niet bij ${it.missing.joinToString(", ")}") }
+                    ).forEach { appendLine("- tafel ${it.tableNumber}, ${readable(it.at)}: niet bij ${it.missing.joinToString(", ")}") }
             }
             appendLine()
 
@@ -78,9 +78,9 @@ class Report(
                 for (s in p.subProducts) {
                     val r = s.lastRun
                     val gates =
-                        r?.gates?.joinToString(" ") { "${GATES[it.gate] ?: it.gate} ${if (it.outcome == "open") "open" else "**dicht**"}" }
+                        r?.gates?.joinToString(", ") { "${GATES[it.gate] ?: it.gate} ${if (it.outcome == "open") "open" else "**dicht**"}" }
                             ?: ""
-                    val run = r?.let { "${it.version}, ${it.environment}, ${it.started}" } ?: ""
+                    val run = r?.let { "${it.version}, ${it.environment}, ${readable(it.started)}" } ?: ""
                     appendLine("| ${s.name} | ${status(s.status)} | $run | $gates | ${r?.stuckAt ?: ""} |")
                 }
                 appendLine()
@@ -161,6 +161,17 @@ class Report(
         private fun status(s: String) = mapOf("green" to "groen", "red" to "rood", "running" to "bezig").getOrDefault(s, "onbekend")
 
         private fun round(v: Double) = Math.round(v * 10) / 10.0
+
+        private val READABLE = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss 'UTC'").withZone(ZoneOffset.UTC)
+
+        /** A moment as people read it. */
+        private fun readable(t: Any?): String =
+            when (t) {
+                is Instant -> READABLE.format(t)
+                is String -> runCatching { READABLE.format(Instant.parse(t)) }.getOrDefault(t)
+                null -> ""
+                else -> t.toString()
+            }
 
         private fun pct(v: Double?) = v?.let { "${round(it)}%" } ?: "–"
 
