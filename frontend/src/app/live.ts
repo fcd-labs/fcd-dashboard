@@ -171,6 +171,18 @@ export class Live implements OnInit {
     return m ? `${m[1]} ${m[4]}-${m[3]} ${m[5]}:${m[6]}` : (e ?? '');
   }
 
+  /** The stubs, short: "stubs 1.0.0: keuken · bar · kassa" (grouped by version). */
+  protected stubText(v: RunningVersion): string {
+    const byVersion = new Map<string, string[]>();
+    for (const st of v.stubs ?? []) {
+      const key = st.version ?? '?';
+      byVersion.set(key, [...(byVersion.get(key) ?? []), st.title]);
+    }
+    return [...byVersion.entries()]
+      .map(([ver, names]) => `stubs ${ver}: ${names.join(' · ')}`)
+      .join(' – ');
+  }
+
   /** The containers of the version that runs, short: "frontend 1.0.0 · backend 1.0.1". */
   protected parts(v: RunningVersion): string {
     return Object.entries(v.containers ?? {})

@@ -802,8 +802,6 @@
 /* The messages: a scroll bar that is always visible. */
 .messages-list {
   overflow-y: scroll;
-  scrollbar-width: thin;
-  scrollbar-color: var(--muted) transparent;
 }
 .messages-list::-webkit-scrollbar {
   width: 8px;

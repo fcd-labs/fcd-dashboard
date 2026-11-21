@@ -240,9 +240,9 @@ describe('Live', () => {
     expect(flat(bar.querySelector('.running-version')?.textContent)).toBe(
       'draait nu: Bestellen 1.0.0 (frontend 1.0.0 · backend 1.0.0)',
     );
-    expect(
-      Array.from(bar.querySelectorAll('.stub-versions span')).map((e) => flat(e.textContent)),
-    ).toEqual(['keuken 1.0.0', 'bar 1.0.0']);
+    expect(flat(bar.querySelector('.stub-versions')?.textContent)).toBe(
+      'stubs 1.0.0: keuken · bar',
+    );
     expect(bar.querySelector('[data-command="start-run"]')).not.toBeNull();
     // The key result is in its own tab, not on the live view.
     expect(el.querySelector('.keyresult-bar')).toBeNull();

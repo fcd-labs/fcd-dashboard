@@ -24,12 +24,7 @@
             >draait nu: <strong>{{ v.title }} {{ v.version }}</strong> ({{ parts(v) }})</span
           >
           @if (v.stubs?.length) {
-            <span class="stub-versions"
-              >stubs:
-              @for (st of v.stubs; track st.name) {
-                <span>{{ st.title }} {{ st.version ?? '?' }}</span>
-              }
-            </span>
+            <span class="stub-versions">{{ stubText(v) }}</span>
           }
         </p>
       }
