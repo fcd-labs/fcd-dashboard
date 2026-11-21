@@ -215,9 +215,7 @@
         ><span data-status="backlog">· backlog: nog niet gebouwd</span>
         <span class="shortened">✂ ingekort voor de demo (afwijking)</span></span
       >
-      <span class="version" [title]="'Dashboard ' + s.dashboardVersion">{{
-        productVersion(s)
-      }}</span>
+      <span class="version">Dashboard {{ s.dashboardVersion }}</span>
       <span class="keys">
         @if (!presentation()) {
           Toets <kbd>P</kbd>: presentatiemodus (<kbd>Esc</kbd>: terug)

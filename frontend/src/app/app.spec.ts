@@ -231,8 +231,17 @@ describe('App (dashboard)', () => {
 
   afterEach(() => fixture.destroy());
 
+  it('opens on the live view (home)', () => {
+    flushAll();
+    expect(el.querySelector('.tabs button[aria-selected="true"]')?.textContent?.trim()).toBe(
+      'Live',
+    );
+    expect(el.querySelector('app-live')).not.toBeNull();
+  });
+
   it('shows per product which sub-products are red and where they are stuck', () => {
     flushAll();
+    openTab('Pipelines en gates');
     expect(el.querySelector('.sub')?.textContent).toContain('Showcase demo');
     expect(el.querySelector('.product h2')?.textContent).toContain('showkitchen');
     expect(el.querySelector('.product .badge')?.textContent).toContain('rood');
@@ -245,6 +254,7 @@ describe('App (dashboard)', () => {
 
   it('drills down from product to sub-product: steps, gates with reason, deployed containers and explains', () => {
     flushAll();
+    openTab('Pipelines en gates');
     (el.querySelector('.subproducts tbody tr') as HTMLElement).click();
     fixture.detectChanges();
     const detail = el.querySelector('.detail')!;
@@ -354,6 +364,7 @@ describe('App (dashboard)', () => {
 
   it('says when there are no log lines yet', () => {
     flushAll({ ...overview, products: [] });
+    openTab('Pipelines en gates');
     expect(el.querySelector('.empty')?.textContent).toContain('Nog geen logregels');
   });
 

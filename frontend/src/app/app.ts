@@ -80,9 +80,25 @@ export class App {
 
   private readonly params = new URLSearchParams(globalThis.location?.search ?? '');
   /** From the address: ?tab=live, or ?subproduct=... (a link from the live view) opens that sub-product. */
-  protected readonly tab = signal<Tab>(
-    this.params.get('tab') === 'live' || this.params.has('presentatie') ? 'live' : 'status',
-  );
+  /** Home is the live view; ?tab=<name> opens another tab, a link to a run (?subproduct=...) opens the overview. */
+  protected readonly tab = signal<Tab>(this.startTab());
+
+  private startTab(): Tab {
+    const tabs: Tab[] = [
+      'live',
+      'status',
+      'kpis',
+      'keyresult',
+      'changelog',
+      'tests',
+      'loglines',
+      'report',
+    ];
+    const asked = this.params.get('tab') as Tab | null;
+    if (asked && tabs.includes(asked)) return asked;
+    if (this.params.has('subproduct')) return 'status';
+    return 'live';
+  }
   /** From the address (?experiment=...), else the Dashboard chooses the current experiment. */
   protected readonly experiment = signal<string | null>(this.params.get('experiment'));
   /** Presentation mode for a large screen (?presentatie, or the key P on the live view). */
