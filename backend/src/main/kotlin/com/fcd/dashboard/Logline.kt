@@ -51,9 +51,12 @@ data class Logline(
                 "dev.cdevents.pipelinerun.finished.0.2.0" to "pipelinerun.finished",
                 "dev.cdevents.taskrun.started.0.2.0" to "taskrun.started",
                 "dev.cdevents.taskrun.finished.0.2.0" to "taskrun.finished",
+                "dev.cdevents.testsuiterun.started.0.2.0" to "testsuiterun.started",
+                "dev.cdeventsx.fcd-testsuiterun.progressed.0.1.0" to "testsuiterun.progressed",
                 "dev.cdevents.testsuiterun.finished.0.2.0" to "testsuiterun.finished",
                 "dev.cdevents.service.deployed.0.2.0" to "service.deployed",
                 "dev.cdevents.artifact.published.0.2.0" to "artifact.published",
+                "dev.cdeventsx.fcd-qualitygate.started.0.1.0" to "qualitygate.started",
                 "dev.cdeventsx.fcd-qualitygate.evaluated.0.1.0" to "qualitygate.evaluated",
                 "dev.cdeventsx.fcd-keyresult.measured.0.1.0" to "keyresult.measured",
             )

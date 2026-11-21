@@ -1,0 +1,231 @@
+package com.fcd.dashboard
+
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import org.slf4j.LoggerFactory
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.isDirectory
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.name
+
+data class StepConfig(
+    val name: String,
+    val title: String,
+    val gate: String?,
+    val testType: String?,
+)
+
+data class GateConfig(
+    val name: String,
+    val title: String,
+    val afterSteps: List<String>,
+    val beforeSteps: List<String>,
+)
+
+data class Presentation(
+    val title: String? = null,
+    val theme: String = "dark",
+    val fontScale: Double = 1.5,
+    val focusRunning: Boolean = true,
+)
+
+data class LiveSettings(
+    /** The configuration of the showcase was read. */
+    val configured: Boolean = false,
+    /** Which sub-products, in this order; empty is all. */
+    val subProducts: List<String> = emptyList(),
+    /** Which runs (werkplek, lokaal); empty is all. */
+    val environments: List<String> = emptyList(),
+    val layout: String = "stacked",
+    val keepFinishedSeconds: Int = 600,
+    val presentation: Presentation = Presentation(),
+)
+
+data class SubProductConfig(
+    val name: String,
+    val title: String,
+    val product: String?,
+    val containers: List<String>,
+)
+
+/** One place on the line of the live view: a step or a gate. */
+data class LaneEntry(
+    val kind: String,
+    val name: String,
+    val title: String,
+)
+
+/**
+ * What the Dashboard reads from the configuration of its showcase (fcd-<showcase>/fcd/\*.fcd.yaml, FCD model):
+ * the steps and gates in their order (kind Pipeline, Step, QualityGate), the sub-products, and what the live view shows
+ * (kind Dashboard, spec.live). Read only; nothing showcase-specific in the code.
+ */
+class ShowcaseConfig(
+    val showcase: String?,
+    val steps: List<StepConfig>,
+    val gates: List<GateConfig>,
+    val subProducts: List<SubProductConfig>,
+    val live: LiveSettings,
+) {
+    /** The steps and gates in order: gates before a step, the step, then the gates that close after it. */
+    val lane: List<LaneEntry> by lazy {
+        val order = steps.map { it.name }
+        val placed = mutableSetOf<String>()
+        val entries = mutableListOf<LaneEntry>()
+
+        fun gate(g: GateConfig) {
+            if (placed.add(g.name)) entries += LaneEntry("gate", g.name, g.title)
+        }
+        for (step in steps) {
+            gates.filter { step.name in it.beforeSteps }.forEach(::gate)
+            entries += LaneEntry("step", step.name, step.title)
+            gates
+                .filter { g -> g.afterSteps.isNotEmpty() && g.afterSteps.maxOf { order.indexOf(it) } == order.indexOf(step.name) }
+                .forEach(::gate)
+        }
+        gates.forEach(::gate)
+        entries
+    }
+
+    fun step(name: String): StepConfig? = steps.firstOrNull { it.name == name }
+
+    fun subProductTitle(name: String): String = subProducts.firstOrNull { it.name == name }?.title ?: name
+
+    companion object {
+        private val log = LoggerFactory.getLogger(ShowcaseConfig::class.java)
+
+        val EMPTY = ShowcaseConfig(null, emptyList(), emptyList(), emptyList(), LiveSettings())
+
+        /** Reads all \*.yaml files in [dir]. Without a directory or with an error: [EMPTY] (the live view still works). */
+        fun load(dir: Path): ShowcaseConfig {
+            if (!dir.isDirectory()) return EMPTY
+            return try {
+                val files =
+                    Files.list(dir).use { s ->
+                        s.filter { it.isRegularFile() && (it.name.endsWith(".yaml") || it.name.endsWith(".yml")) }.sorted().toList()
+                    }
+                parse(files.flatMap { readDocuments(Files.readString(it)) })
+            } catch (e: Exception) {
+                log.warn("The configuration of the showcase in {} could not be read: {}", dir, e.message)
+                EMPTY
+            }
+        }
+
+        fun parse(yaml: String): ShowcaseConfig =
+            try {
+                parse(readDocuments(yaml))
+            } catch (e: Exception) {
+                log.warn("The configuration of the showcase could not be read: {}", e.message)
+                EMPTY
+            }
+
+        private fun readDocuments(yaml: String): List<JsonNode> {
+            val factory = YAMLFactory()
+            factory.createParser(yaml).use { parser ->
+                return Json.mapper
+                    .readValues(parser, JsonNode::class.java)
+                    .readAll()
+                    .filter { it.isObject }
+            }
+        }
+
+        private fun parse(docs: List<JsonNode>): ShowcaseConfig {
+            fun ofKind(kind: String) = docs.filter { it.path("kind").asText() == kind }
+
+            fun JsonNode.name() = path("metadata").path("name").asText()
+
+            fun JsonNode.title() = path("metadata").path("title").asText("").ifBlank { name() }
+
+            fun JsonNode.strings() = if (isArray) map { it.asText() } else emptyList()
+
+            val stepDocs = ofKind("Step").associateBy { it.name() }
+            val pipeline = ofKind("Pipeline").firstOrNull()
+            val order =
+                pipeline
+                    ?.path("spec")
+                    ?.path("steps")
+                    ?.strings()
+                    .orEmpty()
+            val steps =
+                order.map { name ->
+                    val d = stepDocs[name]
+                    StepConfig(
+                        name = name,
+                        title = d?.title() ?: name,
+                        gate =
+                            d
+                                ?.path("spec")
+                                ?.path("gate")
+                                ?.asText("")
+                                ?.ifBlank { null },
+                        testType =
+                            d
+                                ?.path("spec")
+                                ?.path("testType")
+                                ?.asText("")
+                                ?.ifBlank { null },
+                    )
+                }
+            val gates =
+                ofKind("QualityGate").map {
+                    GateConfig(
+                        name = it.name(),
+                        title = it.title(),
+                        afterSteps = it.path("spec").path("afterSteps").strings(),
+                        beforeSteps = it.path("spec").path("beforeSteps").strings(),
+                    )
+                }
+            val containers = ofKind("Container")
+            val subProducts =
+                ofKind("SubProduct").map { sp ->
+                    SubProductConfig(
+                        name = sp.name(),
+                        title = sp.title(),
+                        product =
+                            sp
+                                .path("spec")
+                                .path("product")
+                                .asText("")
+                                .ifBlank { null },
+                        containers = containers.filter { it.path("spec").path("subProduct").asText() == sp.name() }.map { it.name() },
+                    )
+                }
+            val live = ofKind("Dashboard").firstOrNull()?.path("spec")?.path("live")
+            val p = live?.path("presentation")
+            val defaults = LiveSettings()
+            val settings =
+                LiveSettings(
+                    configured = docs.isNotEmpty(),
+                    subProducts = live?.path("subProducts")?.strings().orEmpty(),
+                    environments = live?.path("environments")?.strings().orEmpty(),
+                    layout = live?.path("layout")?.asText("")?.takeIf { it in setOf("stacked", "side-by-side") } ?: defaults.layout,
+                    keepFinishedSeconds =
+                        live?.path("keepFinishedSeconds")?.takeIf { it.isInt && it.asInt() >= 0 }?.asInt()
+                            ?: defaults.keepFinishedSeconds,
+                    presentation =
+                        Presentation(
+                            title = p?.path("title")?.asText("")?.ifBlank { null },
+                            theme = p?.path("theme")?.asText("")?.takeIf { it in setOf("dark", "light") } ?: defaults.presentation.theme,
+                            fontScale =
+                                p
+                                    ?.path("fontScale")
+                                    ?.takeIf { it.isNumber }
+                                    ?.asDouble()
+                                    ?.coerceIn(0.5, 4.0)
+                                    ?: defaults.presentation.fontScale,
+                            focusRunning =
+                                p?.path("focusRunning")?.takeIf { it.isBoolean }?.asBoolean() ?: defaults.presentation.focusRunning,
+                        ),
+                )
+            val showcase =
+                ofKind("Factory")
+                    .firstOrNull()
+                    ?.path("spec")
+                    ?.path("showcase")
+                    ?.asText("")
+                    ?.ifBlank { null }
+            return ShowcaseConfig(showcase, steps, gates, subProducts, settings)
+        }
+    }
+}
