@@ -316,9 +316,13 @@
 
 /* On the large screen nothing is hidden: the line continues on the next row. */
 .presentation .line {
-  flex-wrap: wrap;
-  row-gap: 0.8em;
+  flex-wrap: nowrap;
   overflow-x: visible;
+}
+
+/* The big screen: the size from the configuration, but never larger than fits on one screen. */
+.presentation {
+  font-size: min(calc(1rem * var(--scale, 1)), 1.15vw, 2.1vh);
 }
 
 /* Demo: rows per container, backlog, shortened steps, buttons, key result */
@@ -483,7 +487,7 @@
 /* One screen without scrolling: the container rows side by side, the status in two short lines. */
 .container-rows {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 34em), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
   gap: 0 1.2em;
 }
 .container-rows .row + .row {
