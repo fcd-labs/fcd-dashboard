@@ -148,7 +148,9 @@ export class Live implements OnInit {
     );
     const st = built.map((i) => i?.status ?? 'waiting');
     if (st.some((x) => x === 'failed')) return 'failed';
-    if (st.length && st.every((x) => x === 'succeeded' || x === 'explained')) return 'succeeded';
+    // A container that stays the same skips its steps: that counts as built.
+    if (st.length && st.every((x) => x === 'succeeded' || x === 'explained' || x === 'skipped'))
+      return 'succeeded';
     if (st.some((x) => x === 'running' || x === 'succeeded')) return 'running';
     return r.outcome === 'running' ? 'waiting' : 'not-run';
   }
