@@ -845,7 +845,7 @@
 }
 /* The pipeline grows with the room: a larger letter on a larger screen, the rows together in the middle. */
 .live:not(.presentation) .lane {
-  font-size: clamp(14px, min(2.3vh, 1.3vw), 22px);
+  font-size: clamp(13px, min(2.3vh, 1.08vw), 22px);
 }
 .live:not(.presentation) .lane > .container-rows {
   margin-top: auto;
