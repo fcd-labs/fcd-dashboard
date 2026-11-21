@@ -650,8 +650,8 @@ components:
         title: { type: string }
         status:
           type: string
-          description: Step - waiting, running, succeeded, failed, skipped, not-run, backlog (not built yet). Gate - pending, deciding, waiting (for a human), open, closed, not-run.
-          enum: [waiting, running, succeeded, failed, skipped, not-run, backlog, pending, deciding, open, closed]
+          description: Step - waiting, running, succeeded, failed, explained (found something its gate let through with an approved explain), skipped, not-run, backlog (not built yet). Gate - pending, deciding, waiting (for a human), open, closed, not-run.
+          enum: [waiting, running, succeeded, failed, explained, skipped, not-run, backlog, pending, deciding, open, closed]
         step: { type: integer }
         startedAt: { type: string, format: date-time }
         seconds: { type: number }

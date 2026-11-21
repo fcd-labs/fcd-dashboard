@@ -467,10 +467,20 @@ class LiveViews(
                 explains = g.explains,
                 waitingFor = g.waitingFor,
             )
-        val items =
+        val raw =
             order.map { key ->
                 val (kind, name) = key.split(":", limit = 2)
                 if (kind == "step") stepItem(steps.getValue(key), null) else gateItem(gates.getValue(name))
+            }
+        // A step that found something its gate let through with an approved explain: not failed, but explained.
+        val explainedGates = raw.filter { it.kind == "gate" && it.status == "open" && it.explains.isNotEmpty() }.map { it.name }.toSet()
+        val items =
+            raw.map {
+                if (it.kind == "step" && it.status == "failed" && config.step(it.name)?.gate in explainedGates) {
+                    it.copy(status = "explained", excerpt = null)
+                } else {
+                    it
+                }
             }
         val versions = lines.last().containers()
         val containerRows =

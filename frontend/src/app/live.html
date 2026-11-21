@@ -157,7 +157,7 @@
                   type="button"
                   class="primary"
                   data-command="approve-release"
-                  [disabled]="!!busy()"
+                  [disabled]="!approvable(r)"
                   (click)="send('approve-release', { run: r.run })"
                 >
                   ✔ Release goedkeuren

@@ -203,6 +203,7 @@ export type LiveStatus =
   | 'running'
   | 'succeeded'
   | 'failed'
+  | 'explained'
   | 'skipped'
   | 'not-run'
   | 'backlog'

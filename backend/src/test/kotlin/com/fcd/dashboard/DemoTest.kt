@@ -178,6 +178,39 @@ class DemoTest {
     }
 
     @Test
+    fun `a step that its gate let through with an approved explain is explained, not failed`() {
+        val lines =
+            arrayOf(
+                line("dev.cdevents.pipelinerun.started.0.2.0", """{"pipelineName":"shop","outcome":"running"}"""),
+                task("started", "build"),
+                task("finished", "build", outcome = "failed"),
+                line(
+                    "dev.cdeventsx.fcd-qualitygate.evaluated.0.1.0",
+                    """{"gate":"build","outcome":"open","reason":"afwijking EXP-1: versheid","explain":"EXP-1"}""",
+                ),
+            )
+        val withBuildGate =
+            ShowcaseConfig.parse(
+                """
+                kind: Pipeline
+                metadata: {name: p}
+                spec: {steps: [build]}
+                ---
+                kind: Step
+                metadata: {name: build}
+                spec: {gate: build}
+                ---
+                kind: QualityGate
+                metadata: {name: build}
+                spec: {afterSteps: [build]}
+                """.trimIndent(),
+            )
+        val r = LiveViews(store(*lines), Views(InMemoryEventStore(), "sim", "demo"), withBuildGate).state("sim").runs.single()
+        assertEquals(listOf("explained", "open"), r.items.map { it.status })
+        assertNull(r.failure)
+    }
+
+    @Test
     fun `commands - only when they make sense, claimed once, by the agent`() {
         val commands = InMemoryCommandStore()
         val live = LiveViews(store(*waitingRun()), Views(InMemoryEventStore(), "sim", "demo"), config, commands)

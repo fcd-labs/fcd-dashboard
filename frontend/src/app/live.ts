@@ -9,6 +9,7 @@ const stepText: Record<string, string> = {
   running: 'bezig',
   succeeded: 'gelukt',
   failed: 'mislukt',
+  explained: 'met afwijking',
   skipped: 'overgeslagen',
   'not-run': 'niet uitgevoerd',
   backlog: 'backlog',
@@ -42,6 +43,7 @@ const marker: Record<string, string> = {
   running: '◐',
   succeeded: '✔',
   failed: '✖',
+  explained: '!',
   skipped: '⤼',
   'not-run': '–',
   backlog: '·',
@@ -136,6 +138,16 @@ export class Live implements OnInit {
   }
 
   /** A command that is still with the Pipeline (pending or claimed). */
+  /** Approving a release is possible while the Pipeline runs (the start command is still open then). */
+  protected approvable(run: LiveRun): boolean {
+    return !this.state()?.commands.some(
+      (c) =>
+        c.kind === 'approve-release' &&
+        c.run === run.run &&
+        (c.status === 'pending' || c.status === 'claimed'),
+    );
+  }
+
   protected readonly busy = computed<Command | undefined>(() =>
     this.state()?.commands.find((c) => c.status === 'pending' || c.status === 'claimed'),
   );
