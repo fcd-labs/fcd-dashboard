@@ -17,10 +17,7 @@
 
   @if (keyResult(); as kr) {
     @if (kr.receivers?.length) {
-      <div
-        class="keyresult-bar"
-        [class.bad]="kr.percent !== undefined && kr.percent !== null && kr.percent < 100"
-      >
+      <div class="keyresult-bar" [class.bad]="lastIncomplete(kr)">
         <span class="kr-label"
           >Key result{{ kr.version ? ' (Bestellen ' + kr.version + ')' : '' }}</span
         >

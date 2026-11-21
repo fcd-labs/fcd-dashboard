@@ -137,6 +137,11 @@ export class Live implements OnInit {
     });
   }
 
+  /** Red when the last order did not arrive everywhere (the key result now, not the history). */
+  protected lastIncomplete(kr: KeyResultView): boolean {
+    return (kr.receivers ?? []).some((r) => !r.lastArrived);
+  }
+
   /** A command that is still with the Pipeline (pending or claimed). */
   /** Approving a release is possible while the Pipeline runs (the start command is still open then). */
   protected approvable(run: LiveRun): boolean {

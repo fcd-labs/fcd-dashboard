@@ -230,7 +230,18 @@ class LiveViews(
                         { it.subProduct },
                     ),
                 )
-        return LiveState(views.showcase, experiment, Instant.now(), settings, runs, config.controls, commands.recent(10))
+        // Commands of this experiment (and the reset that started it); open commands always.
+        val since =
+            store
+                .all(experiment)
+                .firstOrNull()
+                ?.timestamp
+                ?.minusSeconds(COMMAND_SLACK_SECONDS)
+        val recent =
+            commands.recent(10).filter {
+                it.status == "pending" || it.status == "claimed" || since == null || !it.requestedAt.isBefore(since)
+            }
+        return LiveState(views.showcase, experiment, Instant.now(), settings, runs, config.controls, recent)
     }
 
     private class StepState(
@@ -548,6 +559,9 @@ class LiveViews(
 
     companion object {
         const val MAX_EXCERPT = 300
+
+        /** A reset is requested shortly before the first log line of the new experiment. */
+        const val COMMAND_SLACK_SECONDS = 300L
 
         /** One line of output, at most [MAX_EXCERPT] characters. */
         fun oneLine(text: String): String {
