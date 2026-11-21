@@ -396,20 +396,3 @@ tr.sum td {
   padding: 8px 24px 16px;
   line-height: 1.5;
 }
-.report-html table {
-  border-collapse: collapse;
-  margin: 8px 0 12px;
-  width: 100%;
-  font-size: 0.9rem;
-}
-.report-html th,
-.report-html td {
-  border: 1px solid var(--line);
-  padding: 6px 10px;
-  text-align: left;
-  vertical-align: top;
-}
-.report-html h2 {
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 4px;
-}
