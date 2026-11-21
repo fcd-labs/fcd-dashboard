@@ -1,7 +1,34 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
+import { DashboardApi } from './dashboard-api';
 import { Live } from './live';
 import { LiveStream } from './live-stream';
-import { LiveRun, LiveState } from './model';
+import { Command, Controls, KeyResultView, LiveRun, LiveState } from './model';
+
+class FakeApi {
+  sent: { kind: string; extra: unknown }[] = [];
+  refuse: string | null = null;
+  kr: KeyResultView = {
+    experiment: 'sim',
+    keyResult: 'k',
+    orders: 1,
+    complete: 0,
+    percent: 0,
+    incomplete: [],
+    version: '1.0.0',
+    receivers: [
+      { name: 'kitchen', title: 'keuken', stub: true, lastArrived: true, arrived: 1 },
+      { name: 'bar', title: 'bar', stub: true, lastArrived: false, arrived: 0 },
+    ],
+  };
+  keyResult() {
+    return of(this.kr);
+  }
+  command(kind: string, extra: unknown = {}) {
+    this.sent.push({ kind, extra });
+    return this.refuse ? throwError(() => ({ error: { detail: this.refuse } })) : of({} as Command);
+  }
+}
 
 class FakeStream {
   experiment: string | null = null;
@@ -124,8 +151,14 @@ const waiting: LiveRun = {
   ],
 };
 
-function state(runs: LiveRun[]): LiveState {
+function state(
+  runs: LiveRun[],
+  controls: Controls = { startButton: false, demoReset: false },
+  commands: Command[] = [],
+): LiveState {
   return {
+    controls,
+    commands,
     showcase: 'demo',
     experiment: 'sim',
     serverTime: now.toISOString(),
@@ -145,6 +178,7 @@ describe('Live', () => {
   let fixture: ComponentFixture<Live>;
   let el: HTMLElement;
   let stream: FakeStream;
+  let api: FakeApi;
 
   const flat = (s: string | null | undefined) => (s ?? '').replace(/\s+/g, ' ').trim();
 
@@ -152,9 +186,13 @@ describe('Live', () => {
     vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
     vi.setSystemTime(now);
     stream = new FakeStream();
+    api = new FakeApi();
     TestBed.configureTestingModule({
       imports: [Live],
-      providers: [{ provide: LiveStream, useValue: stream }],
+      providers: [
+        { provide: LiveStream, useValue: stream },
+        { provide: DashboardApi, useValue: api },
+      ],
     });
     fixture = TestBed.createComponent(Live);
     fixture.componentRef.setInput('experiment', 'sim');
@@ -170,6 +208,119 @@ describe('Live', () => {
   }
 
   afterEach(() => vi.useRealTimers());
+
+  const demo: Controls = { startButton: true, demoReset: true, approver: 'Johannes' };
+
+  it('shows the key result per stub: red for the bar', () => {
+    create();
+    push([]);
+    const bar = el.querySelector('[data-receiver="bar"]');
+    expect(flat(bar?.textContent)).toBe('✖ bar stub');
+    expect(bar?.getAttribute('data-arrived')).toBe('false');
+    expect(el.querySelector('.keyresult-bar')?.classList).toContain('bad');
+    expect(flat(el.querySelector('.kr-label')?.textContent)).toBe('Key result (Bestellen 1.0.0)');
+  });
+
+  it('the start button sends start-run; not while a pipeline runs', () => {
+    create();
+    stream.onState(state([], demo));
+    fixture.detectChanges();
+    const start = el.querySelector<HTMLButtonElement>('[data-command="start-run"]')!;
+    expect(flat(start.textContent)).toBe('▶ Pipeline starten (Johannes)');
+    start.click();
+    expect(api.sent).toEqual([{ kind: 'start-run', extra: {} }]);
+
+    stream.onState(state([running], demo));
+    fixture.detectChanges();
+    expect(el.querySelector<HTMLButtonElement>('[data-command="start-run"]')!.disabled).toBe(true);
+    expect(el.querySelector<HTMLButtonElement>('[data-command="demo-reset"]')!.disabled).toBe(true);
+  });
+
+  it('a waiting human gate has a button to approve the release of that run', () => {
+    create();
+    const waiting = { kind: 'human', name: 'Johannes', action: 'release goedkeuren' };
+    stream.onState(state([{ ...running, waitingFor: waiting }], demo));
+    fixture.detectChanges();
+    el.querySelector<HTMLButtonElement>('[data-command="approve-release"]')!.click();
+    expect(api.sent).toEqual([{ kind: 'approve-release', extra: { run: 'orders-r1' } }]);
+  });
+
+  it('Demo opnieuw asks first, and can keep the run and the report', () => {
+    create();
+    stream.onState(state([], demo));
+    fixture.detectChanges();
+    el.querySelector<HTMLButtonElement>('[data-command="demo-reset"]')!.click();
+    fixture.detectChanges();
+    expect(api.sent).toEqual([]);
+    el.querySelector<HTMLButtonElement>('[data-command="demo-reset-confirm"]')!.click();
+    expect(api.sent).toEqual([{ kind: 'demo-reset', extra: { save: true } }]);
+  });
+
+  it('shows what the Pipeline does with a command, and a refusal', () => {
+    create();
+    const c: Command = {
+      id: '1',
+      kind: 'start-run',
+      requestedBy: 'Johannes',
+      requestedAt: now.toISOString(),
+      status: 'claimed',
+    };
+    stream.onState(state([], demo, [c]));
+    fixture.detectChanges();
+    expect(flat(el.querySelector('.command')?.textContent)).toBe(
+      '⏳ Pipeline starten (Johannes): de Pipeline is bezig',
+    );
+    api.refuse = 'A pipeline is running.';
+    stream.onState(state([], demo, [{ ...c, status: 'done', message: 'bestellen: gelukt' }]));
+    fixture.detectChanges();
+    el.querySelector<HTMLButtonElement>('[data-command="start-run"]')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('[role="alert"]')?.textContent).toContain('A pipeline is running.');
+  });
+
+  it('a row per container, the backlog grey and a shortened step marked', () => {
+    create();
+    push([
+      {
+        ...running,
+        containerRows: [
+          {
+            container: 'orders-frontend',
+            title: 'frontend',
+            version: '1.0.0',
+            items: [
+              {
+                kind: 'step',
+                name: 'lint',
+                title: 'Statisch',
+                status: 'succeeded',
+                explains: [],
+                container: 'orders-frontend',
+              },
+              { kind: 'step', name: 'coverage', title: 'Dekking', status: 'backlog', explains: [] },
+            ],
+          },
+        ],
+        items: [
+          {
+            kind: 'step',
+            name: 'e2e',
+            title: 'E2E',
+            status: 'waiting',
+            explains: [],
+            shortened: { explain: 'EXP-9', reason: 'kernpad' },
+          },
+        ],
+      },
+    ]);
+    const rows = el.querySelectorAll('.row');
+    expect(rows.length).toBe(2);
+    expect(flat(rows[0].querySelector('.row-title')?.textContent)).toBe('frontend 1.0.0');
+    expect(rows[0].querySelector('[data-name="coverage"]')?.getAttribute('data-status')).toBe(
+      'backlog',
+    );
+    expect(flat(rows[1].querySelector('.explain.shortened')?.textContent)).toBe('✂ EXP-9');
+  });
 
   it('connects for the chosen experiment and says when it is live', () => {
     create();

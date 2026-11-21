@@ -15,11 +15,96 @@
     </span>
   </header>
 
+  @if (keyResult(); as kr) {
+    @if (kr.receivers?.length) {
+      <div
+        class="keyresult-bar"
+        [class.bad]="kr.percent !== undefined && kr.percent !== null && kr.percent < 100"
+      >
+        <span class="kr-label"
+          >Key result{{ kr.version ? ' (Bestellen ' + kr.version + ')' : '' }}</span
+        >
+        @for (r of kr.receivers; track r.name) {
+          <span class="receiver" [attr.data-arrived]="r.lastArrived" [attr.data-receiver]="r.name">
+            {{ r.lastArrived ? '✔' : '✖' }} {{ r.title }}
+            @if (r.stub) {
+              <small class="stub">stub</small>
+            }
+          </span>
+        }
+        <span class="kr-count"
+          >{{ kr.complete }} van {{ kr.orders }} bestellingen volledig aangekomen</span
+        >
+      </div>
+    }
+  }
+
   @if (state(); as s) {
+    @if (s.controls.startButton || s.controls.demoReset) {
+      <div class="controls">
+        @if (s.controls.startButton) {
+          <button
+            type="button"
+            class="primary"
+            data-command="start-run"
+            [disabled]="running() || !!busy()"
+            (click)="send('start-run')"
+          >
+            ▶ Pipeline starten{{ s.controls.approver ? ' (' + s.controls.approver + ')' : '' }}
+          </button>
+        }
+        @if (s.controls.demoReset && !presentation()) {
+          @if (!confirmReset()) {
+            <button
+              type="button"
+              data-command="demo-reset"
+              [disabled]="running() || !!busy()"
+              (click)="confirmReset.set(true)"
+            >
+              ↺ Demo opnieuw
+            </button>
+          } @else {
+            <span class="confirm" role="dialog" aria-label="Demo opnieuw bevestigen">
+              Terug naar de start van de demo, met een lege log?
+              <label
+                ><input
+                  type="checkbox"
+                  [checked]="saveFirst()"
+                  (change)="saveFirst.set($any($event.target).checked)"
+                />
+                eerst de run en het statusrapport bewaren</label
+              >
+              <button
+                type="button"
+                class="danger"
+                data-command="demo-reset-confirm"
+                (click)="send('demo-reset', { save: saveFirst() })"
+              >
+                Ja, demo opnieuw
+              </button>
+              <button type="button" (click)="confirmReset.set(false)">Annuleren</button>
+            </span>
+          }
+        }
+        @if (busy(); as c) {
+          <span class="command" [attr.data-status]="c.status">⏳ {{ commandText(c) }}</span>
+        } @else if (lastCommand(); as c) {
+          <span class="command" [attr.data-status]="c.status">{{ commandText(c) }}</span>
+        }
+        @if (refused(); as r) {
+          <span class="command" data-status="rejected" role="alert">{{ r }}</span>
+        }
+      </div>
+    }
+
     @if (runs().length === 0) {
       <p class="none">
-        Nog geen runs in experiment {{ s.experiment }}. Start een pipeline met <code>fcd ci</code>,
-        of de simulator.
+        Nog geen runs in experiment {{ s.experiment }}.
+        @if (s.controls.startButton) {
+          Start de pipeline met de knop.
+        } @else {
+          Start een pipeline met <code>fcd ci</code>, of de simulator.
+        }
       </p>
     }
     <div class="lanes" [attr.data-layout]="s.settings.layout">
@@ -43,42 +128,22 @@
           </h3>
 
           @if (recent(r)) {
-            <ol class="line">
-              @for (i of r.items; track i.kind + i.name) {
-                <li
-                  class="stop"
-                  [attr.data-kind]="i.kind"
-                  [attr.data-status]="i.status"
-                  [attr.data-name]="i.name"
-                  [title]="i.reason ?? ''"
+            @for (c of r.containerRows ?? []; track c.container) {
+              <div class="row" [attr.data-container]="c.container">
+                <span class="row-title"
+                  >{{ c.title }} <small>{{ c.version }}</small></span
                 >
-                  <span class="mark" aria-hidden="true"
-                    ><span>{{ marker(i) }}</span></span
-                  >
-                  <span class="label">{{ i.title }}</span>
-                  <span class="state"
-                    >{{ statusText(i) }}
-                    @if (i.status === 'running') {
-                      {{ elapsed(i.startedAt) }}
-                    } @else if (i.seconds && i.kind === 'step') {
-                      {{ clock(i.seconds) }}
-                    }
-                  </span>
-                  @if (i.tests; as t) {
-                    <span class="tests">
-                      <span class="ok">✔ {{ t.passed }}</span>
-                      <span class="ko" [class.zero]="t.failed === 0">✖ {{ t.failed }}</span>
-                      @if (!t.finished && t.expected) {
-                        <span class="of">/ {{ t.expected }}</span>
-                      }
-                    </span>
-                  }
-                  @if (i.explains.length) {
-                    <span class="explain">{{ i.explains.join(', ') }}</span>
-                  }
-                </li>
+                <ng-container *ngTemplateOutlet="line; context: { $implicit: c.items }" />
+              </div>
+            }
+            <div class="row" data-container="">
+              @if (r.containerRows?.length) {
+                <span class="row-title"
+                  >{{ r.title }} <small>{{ r.version }}</small></span
+                >
               }
-            </ol>
+              <ng-container *ngTemplateOutlet="line; context: { $implicit: r.items }" />
+            </div>
           }
 
           @if (r.waitingFor; as w) {
@@ -86,6 +151,17 @@
               ⏸ Wacht op {{ w.name }}
               @if (w.action) {
                 – {{ w.action }}
+              }
+              @if (s.controls.startButton && r.outcome === 'running') {
+                <button
+                  type="button"
+                  class="primary"
+                  data-command="approve-release"
+                  [disabled]="!!busy()"
+                  (click)="send('approve-release', { run: r.run })"
+                >
+                  ✔ Release goedkeuren
+                </button>
               }
             </p>
           }
@@ -125,7 +201,56 @@
         </article>
       }
     </div>
+    <p class="legend">
+      <span data-status="backlog">· backlog: nog niet gebouwd</span>
+      <span class="shortened">✂ ingekort voor de demo (afwijking)</span>
+    </p>
   } @else {
     <p class="none">De live weergave wordt geladen…</p>
   }
 </section>
+
+<ng-template #line let-items>
+  <ol class="line">
+    @for (i of items; track $index) {
+      <li
+        class="stop"
+        [attr.data-kind]="i.kind"
+        [attr.data-status]="i.status"
+        [attr.data-name]="i.name"
+        [class.is-shortened]="!!i.shortened"
+        [title]="
+          i.shortened ? i.shortened.explain + ': ' + (i.shortened.reason ?? '') : (i.reason ?? '')
+        "
+      >
+        <span class="mark" aria-hidden="true"
+          ><span>{{ marker(i) }}</span></span
+        >
+        <span class="label">{{ i.title }}</span>
+        <span class="state"
+          >{{ statusText(i) }}
+          @if (i.status === 'running') {
+            {{ elapsed(i.startedAt) }}
+          } @else if (i.seconds && i.kind === 'step') {
+            {{ clock(i.seconds) }}
+          }
+        </span>
+        @if (i.tests; as t) {
+          <span class="tests">
+            <span class="ok">✔ {{ t.passed }}</span>
+            <span class="ko" [class.zero]="t.failed === 0">✖ {{ t.failed }}</span>
+            @if (!t.finished && t.expected) {
+              <span class="of">/ {{ t.expected }}</span>
+            }
+          </span>
+        }
+        @if (i.shortened; as sh) {
+          <span class="explain shortened">✂ {{ sh.explain }}</span>
+        }
+        @if (i.explains.length) {
+          <span class="explain">{{ i.explains.join(', ') }}</span>
+        }
+      </li>
+    }
+  </ol>
+</ng-template>

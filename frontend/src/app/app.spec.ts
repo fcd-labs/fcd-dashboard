@@ -187,6 +187,17 @@ describe('App (dashboard)', () => {
   let http: HttpTestingController;
   let el: HTMLElement;
 
+  const changelog = [
+    {
+      product: 'showkitchen',
+      subProduct: 'bestellen',
+      title: 'Bestellen',
+      version: '1.0.1',
+      containers: { 'bestellen-backend': '1.0.1' },
+      text: '## [1.0.1] - 2026-11-25\n\n### Opgelost\n- <b>bar</b>',
+    },
+  ];
+
   function flushAll(o: Overview = overview): void {
     http.expectOne((r) => r.url === '/api/v1/overview').flush(o);
     http.expectOne((r) => r.url === '/api/v1/tests').flush(tests);
@@ -196,6 +207,7 @@ describe('App (dashboard)', () => {
     http
       .expectOne((r) => r.url === '/api/v1/report')
       .flush('# Statusrapport showcase Demo\n| Experiment | mvp0 |');
+    http.expectOne((r) => r.url === '/api/v1/changelog').flush(changelog);
     fixture.detectChanges();
   }
 
@@ -325,6 +337,19 @@ describe('App (dashboard)', () => {
   it('says when there are no log lines yet', () => {
     flushAll({ ...overview, products: [] });
     expect(el.querySelector('.empty')?.textContent).toContain('Nog geen logregels');
+  });
+
+  it('shows the changelog of the deployed version as text, never as HTML', () => {
+    flushAll();
+    (Array.from(el.querySelectorAll('.tabs button')) as HTMLButtonElement[])
+      .find((b) => b.textContent?.trim() === 'Changelog')!
+      .click();
+    fixture.detectChanges();
+    expect(el.querySelector('.changelog h2')?.textContent?.trim()).toBe('Bestellen 1.0.1');
+    expect(el.querySelector('.changelog .small')?.textContent).toContain('bestellen-backend 1.0.1');
+    const text = el.querySelector('.changelog-text')!;
+    expect(text.textContent).toContain('<b>bar</b>');
+    expect(text.querySelector('b')).toBeNull();
   });
 
   it('says when the data cannot be fetched', () => {

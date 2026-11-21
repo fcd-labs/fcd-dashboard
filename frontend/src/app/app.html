@@ -33,6 +33,9 @@
     <button role="tab" [attr.aria-selected]="tab() === 'keyresult'" (click)="tab.set('keyresult')">
       Key result
     </button>
+    <button role="tab" [attr.aria-selected]="tab() === 'changelog'" (click)="tab.set('changelog')">
+      Changelog
+    </button>
     <button role="tab" [attr.aria-selected]="tab() === 'tests'" (click)="tab.set('tests')">
       Testresultaten
     </button>
@@ -515,6 +518,29 @@
         </section>
       }
 
+      @if (tab() === 'changelog') {
+        <section class="changelog">
+          @for (c of changelog(); track c.product + '/' + c.subProduct) {
+            <article [attr.data-subproduct]="c.subProduct">
+              <h2>{{ c.title || c.subProduct }} {{ c.version }}</h2>
+              <p class="small">
+                {{ c.product }}
+                @for (k of containersOf(c.containers); track k.name) {
+                  · {{ k.name }} {{ k.version }}
+                }
+                @if (c.deployedAt) {
+                  · uitgerold {{ c.deployedAt | date: 'dd-MM HH:mm:ss' }}
+                }
+              </p>
+              <pre class="changelog-text">{{ c.text }}</pre>
+            </article>
+          } @empty {
+            <p class="empty">
+              Nog geen changelog in experiment {{ o.experiment }}: die komt mee met een uitrol.
+            </p>
+          }
+        </section>
+      }
       @if (tab() === 'report') {
         <section class="report">
           <p class="actions">

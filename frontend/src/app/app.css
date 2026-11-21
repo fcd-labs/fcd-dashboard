@@ -373,3 +373,18 @@ tr.sum td {
     border: none;
   }
 }
+
+.changelog article + article {
+  margin-top: 1.5em;
+}
+.changelog-text {
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  line-height: 1.45;
+  padding: 0.8em 1em;
+  border: 1px solid var(--line, #ddd);
+  border-radius: 0.4em;
+  max-height: 70vh;
+  overflow: auto;
+}

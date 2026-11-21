@@ -77,6 +77,18 @@ data class KeyResultView(
     val complete: Int,
     val percent: Double?,
     val incomplete: List<IncompleteOrder>,
+    /** Per receiver (stub): did the last order arrive, and how many orders arrived. */
+    val receivers: List<ReceiverView> = emptyList(),
+    /** The version of the sub-product that measured the last order. */
+    val version: String? = null,
+)
+
+data class ReceiverView(
+    val name: String,
+    val title: String,
+    val stub: Boolean,
+    val lastArrived: Boolean,
+    val arrived: Int,
 )
 
 /**
@@ -90,6 +102,7 @@ data class KeyResultView(
 class Kpis(
     private val views: Views,
     private val store: EventStore,
+    private val config: ShowcaseConfig = ShowcaseConfig.EMPTY,
 ) {
     fun kpis(requested: String?): KpiView {
         val experiment = views.experiment(requested)
@@ -138,7 +151,42 @@ class Kpis(
                     missing = receivers.properties().filterNot { it.value.path("arrived").asBoolean() }.map { it.key },
                 )
             }
+        val names =
+            measured
+                .flatMap {
+                    it.content
+                        .path("receivers")
+                        .properties()
+                        .map { p -> p.key }
+                }.distinct()
+        val receivers =
+            names.map { n ->
+                val stub = config.receiverStub(n)
+                ReceiverView(
+                    name = n,
+                    title = stub?.title ?: n,
+                    stub = stub != null,
+                    lastArrived =
+                        measured
+                            .last()
+                            .content
+                            .path("receivers")
+                            .path(n)
+                            .path("arrived")
+                            .asBoolean(),
+                    arrived =
+                        measured.count {
+                            it.content
+                                .path("receivers")
+                                .path(n)
+                                .path("arrived")
+                                .asBoolean()
+                        },
+                )
+            }
         return KeyResultView(
+            receivers = receivers,
+            version = measured.lastOrNull()?.let { version(it) },
             experiment = experiment,
             keyResult =
                 measured

@@ -14,6 +14,36 @@ data class StepConfig(
     val title: String,
     val gate: String?,
     val testType: String?,
+    /** container: the step runs per container of the sub-product (a row per container); else for the sub-product. */
+    val level: String = "subProduct",
+    /** Id of the approved explain when the step is shortened for the demo (Step.spec.shortened). */
+    val shortened: String? = null,
+    /** Not built yet (Pipeline.spec.backlog): grey on the Dashboard, never run. */
+    val backlog: Boolean = false,
+    /** For a backlog step: the step it comes after (Step.spec.after). */
+    val after: String? = null,
+) {
+    val perContainer: Boolean get() = level == "container"
+}
+
+data class ExplanationConfig(
+    val id: String,
+    val rule: String?,
+    val reason: String?,
+    val until: String?,
+)
+
+data class StubConfig(
+    val name: String,
+    val title: String,
+    val receiver: String,
+)
+
+/** Which buttons the Dashboard shows. */
+data class Controls(
+    val startButton: Boolean = false,
+    val demoReset: Boolean = false,
+    val approver: String? = null,
 )
 
 data class GateConfig(
@@ -54,7 +84,12 @@ data class LaneEntry(
     val kind: String,
     val name: String,
     val title: String,
-)
+    /** A gate before a step (such as the human gate at the start and before releasing): that step. */
+    val before: String? = null,
+) {
+    /** Unique on the line: a gate can stand before more than one step. */
+    val key: String get() = if (before != null) "$name@$before" else name
+}
 
 /**
  * What the Dashboard reads from the configuration of its showcase (fcd-<showcase>/fcd/\*.fcd.yaml, FCD model):
@@ -67,7 +102,43 @@ class ShowcaseConfig(
     val gates: List<GateConfig>,
     val subProducts: List<SubProductConfig>,
     val live: LiveSettings,
+    val backlog: List<StepConfig> = emptyList(),
+    val explanations: Map<String, ExplanationConfig> = emptyMap(),
+    val controls: Controls = Controls(),
+    val containerTitles: Map<String, String> = emptyMap(),
+    /** Stubs by the receiver they stand in for (Container with spec.stub and spec.receiver). */
+    val stubs: Map<String, StubConfig> = emptyMap(),
 ) {
+    fun receiverStub(receiver: String): StubConfig? = stubs[receiver]
+
+    /** The row of a container: the steps of level container, with the backlog steps that come after one of them. */
+    val containerLane: List<LaneEntry> by lazy {
+        withBacklog(
+            steps.filter { it.perContainer }.map { LaneEntry("step", it.name, it.title) },
+        )
+    }
+
+    /** The row of the sub-product: the other steps and all gates, with the backlog steps in their place. */
+    val subProductLane: List<LaneEntry> by lazy {
+        withBacklog(lane.filterNot { it.kind == "step" && step(it.name)?.perContainer == true })
+    }
+
+    private fun withBacklog(entries: List<LaneEntry>): List<LaneEntry> {
+        val out = entries.toMutableList()
+        for (b in backlog) {
+            val at = out.indexOfLast { it.kind == "step" && it.name == b.after }
+            if (b.after != null && at < 0) continue
+            val entry = LaneEntry("step", b.name, b.title)
+            // After the step it follows and after the gates that close behind that step (not before the gate of the next step).
+            var i = if (at < 0) out.size else at + 1
+            while (i < out.size && out[i].kind == "gate" && out[i].before == null) i++
+            out.add(i, entry)
+        }
+        return out
+    }
+
+    fun containerTitle(name: String): String = containerTitles[name] ?: name
+
     /** The steps and gates in order: gates before a step, the step, then the gates that close after it. */
     val lane: List<LaneEntry> by lazy {
         val order = steps.map { it.name }
@@ -78,7 +149,10 @@ class ShowcaseConfig(
             if (placed.add(g.name)) entries += LaneEntry("gate", g.name, g.title)
         }
         for (step in steps) {
-            gates.filter { step.name in it.beforeSteps }.forEach(::gate)
+            gates.filter { step.name in it.beforeSteps }.forEach {
+                placed += it.name
+                entries += LaneEntry("gate", it.name, it.title, before = step.name)
+            }
             entries += LaneEntry("step", step.name, step.title)
             gates
                 .filter { g -> g.afterSteps.isNotEmpty() && g.afterSteps.maxOf { order.indexOf(it) } == order.indexOf(step.name) }
@@ -88,7 +162,7 @@ class ShowcaseConfig(
         entries
     }
 
-    fun step(name: String): StepConfig? = steps.firstOrNull { it.name == name }
+    fun step(name: String): StepConfig? = steps.firstOrNull { it.name == name } ?: backlog.firstOrNull { it.name == name }
 
     fun subProductTitle(name: String): String = subProducts.firstOrNull { it.name == name }?.title ?: name
 
@@ -96,6 +170,8 @@ class ShowcaseConfig(
         private val log = LoggerFactory.getLogger(ShowcaseConfig::class.java)
 
         val EMPTY = ShowcaseConfig(null, emptyList(), emptyList(), emptyList(), LiveSettings())
+
+        private fun JsonNode.optText(field: String): String? = path(field).asText("").ifBlank { null }
 
         /** Reads all \*.yaml files in [dir]. Without a directory or with an error: [EMPTY] (the live view still works). */
         fun load(dir: Path): ShowcaseConfig {
@@ -147,26 +223,44 @@ class ShowcaseConfig(
                     ?.path("steps")
                     ?.strings()
                     .orEmpty()
-            val steps =
-                order.map { name ->
-                    val d = stepDocs[name]
-                    StepConfig(
-                        name = name,
-                        title = d?.title() ?: name,
-                        gate =
-                            d
-                                ?.path("spec")
-                                ?.path("gate")
-                                ?.asText("")
-                                ?.ifBlank { null },
-                        testType =
-                            d
-                                ?.path("spec")
-                                ?.path("testType")
-                                ?.asText("")
-                                ?.ifBlank { null },
-                    )
+
+            fun stepConfig(
+                name: String,
+                backlog: Boolean,
+            ): StepConfig {
+                val spec = stepDocs[name]?.path("spec")
+                return StepConfig(
+                    name = name,
+                    title = stepDocs[name]?.title() ?: name,
+                    gate = spec?.optText("gate"),
+                    testType = spec?.optText("testType"),
+                    level = spec?.optText("level") ?: "subProduct",
+                    shortened = spec?.optText("shortened"),
+                    backlog = backlog,
+                    after = spec?.optText("after"),
+                )
+            }
+            val steps = order.map { stepConfig(it, backlog = false) }
+            val backlog =
+                pipeline
+                    ?.path("spec")
+                    ?.path("backlog")
+                    ?.strings()
+                    .orEmpty()
+                    .filterNot { it in order }
+                    .map { stepConfig(it, backlog = true) }
+            val explanations =
+                ofKind("Explanation").associate {
+                    val spec = it.path("spec")
+                    it.name() to ExplanationConfig(it.name(), spec.optText("rule"), spec.optText("reason"), spec.optText("until"))
                 }
+            val humanGate = ofKind("QualityGate").firstOrNull { it.path("spec").has("approval") }
+            val controls =
+                Controls(
+                    startButton = pipeline?.path("spec")?.optText("trigger") == "dashboard-button",
+                    demoReset = pipeline?.path("spec")?.path("demo")?.isObject == true,
+                    approver = humanGate?.path("spec")?.optText("approver"),
+                )
             val gates =
                 ofKind("QualityGate").map {
                     GateConfig(
@@ -225,7 +319,15 @@ class ShowcaseConfig(
                     ?.path("showcase")
                     ?.asText("")
                     ?.ifBlank { null }
-            return ShowcaseConfig(showcase, steps, gates, subProducts, settings)
+            val containerTitles = containers.associate { it.name() to it.title() }
+            val stubs =
+                containers
+                    .filter { it.path("spec").path("stub").asBoolean() && it.path("spec").optText("receiver") != null }
+                    .associate {
+                        val receiver = it.path("spec").optText("receiver")!!
+                        receiver to StubConfig(it.name(), it.title(), receiver)
+                    }
+            return ShowcaseConfig(showcase, steps, gates, subProducts, settings, backlog, explanations, controls, containerTitles, stubs)
         }
     }
 }

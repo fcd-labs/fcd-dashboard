@@ -1,4 +1,4 @@
-# Contract: de logregel (versie 0.4.0)
+# Contract: de logregel (versie 0.5.0)
 
 De afspraak tussen de squads: de Pipeline (`fcd-pipeline`) en de producten van een showcase (zoals de meting van het key result in `sk-demo`) sturen logregels; het Dashboard van die showcase (`fcd-dashboard`) ontvangt ze. Elke showcase heeft een eigen Dashboard; een logregel van een andere showcase wordt geweigerd. Contract first: eerst dit contract wijzigen, met een nieuwe versie, dan de code.
 
@@ -27,14 +27,15 @@ De afspraak tussen de squads: de Pipeline (`fcd-pipeline`) en de producten van e
 | `context.type` | Wanneer | `subject.content` |
 |---|---|---|
 | `dev.cdevents.pipelinerun.started.0.2.0` / `.finished` | Begin en eind van een run | `pipelineName`, `outcome` (`running`, `success`, `failure`), `errors`, `warnings`; bij `started` optioneel `steps` (de namen van de stappen van deze run, in volgorde) |
-| `dev.cdevents.taskrun.started.0.2.0` / `.finished` | Begin en eind van elke CI-stap | `taskName`, `step` (1–10), `title`, `outcome` (`running`, `succeeded`, `failed`, `skipped`), `reason`; bij `finished` en `failed` optioneel `excerpt` (zie onder) |
+| `dev.cdevents.taskrun.started.0.2.0` / `.finished` | Begin en eind van elke CI-stap | `taskName`, `step` (1–10), `title`, `outcome` (`running`, `succeeded`, `failed`, `skipped`), `reason`; bij `finished` en `failed` optioneel `excerpt` (zie onder); optioneel `container` bij een stap per container (zie onder) |
 | `dev.cdevents.testsuiterun.started.0.2.0` | Begin van een testsoort | `testSuite` (`id`, `name`), `testType`, optioneel `expected` (aantal tests, als bekend) |
 | `dev.cdeventsx.fcd-testsuiterun.progressed.0.1.0` | Tussenstand van een testsoort, hoogstens één per seconde | `testSuite`, `testType`, `tests`, `passed`, `failed`, `skipped` (oplopend: de stand tot nu) |
-| `dev.cdevents.testsuiterun.finished.0.2.0` | Na unit-, integratie- en end-to-end tests | `testType`, `outcome` (`pass`, `fail`), `tests`, `passed`, `failed`, `skipped`, `seconds`, `failures` (namen) |
+| `dev.cdevents.testsuiterun.finished.0.2.0` | Na unit-, integratie- en end-to-end tests | `testType`, `outcome` (`pass`, `fail`), `tests`, `passed`, `failed`, `skipped`, `seconds`, `failures` (namen); optioneel `container` |
 | `dev.cdeventsx.fcd-qualitygate.started.0.1.0` | Begin van een quality gate | `gate`, `afterSteps` of `beforeSteps`, optioneel `waitingFor` (`kind`: `human`; `name`, `action`) als de gate op een mens wacht |
 | `dev.cdeventsx.fcd-qualitygate.evaluated.0.1.0` | Einde van een quality gate (de beslissing) | `gate` (`code`, `build`, `security`, `deploy`, `human`), `afterSteps`, `outcome` (`open`, `closed`), `reason`, `explain` (id's van gebruikte afwijkingen), `explainDetails` (per afwijking: `id`, `gate`, `rule`, `reason`, `approver`, `until`) |
-| `dev.cdevents.service.deployed.0.2.0` | Na een uitrol | `environment.id`, `artifactId` |
+| `dev.cdevents.service.deployed.0.2.0` | Na een uitrol | `environment.id`, `artifactId`; optioneel `changelog`: de changelog van het deelproduct tot en met de uitgerolde versie (Markdown, hoogstens 16 000 tekens) |
 | `dev.cdevents.artifact.published.0.2.0` | Na een release | `tag`, `releaseType` |
+| `dev.cdeventsx.fcd-demo.reset.0.1.0` | "Demo opnieuw": de demo staat weer op de start (eerste logregel van een nieuwe, lege log) | `startTag`, `saved` (of de vorige run en het statusrapport bewaard zijn); `run` is leeg |
 | `dev.cdeventsx.fcd-keyresult.measured.0.1.0` | Per bestelling (sk-demo) | `keyResult`, `orderId`, `tableNumber`, `receivers` (per stub: `arrived`, `receivedAt`), `complete` |
 
 ## Begin en einde
@@ -51,6 +52,10 @@ Per stap en per gate een logregel bij het begin en bij het einde, zodat het Dash
 - **Mensgate:** wacht de gate op een mens, dan staat dat in `waitingFor` van `fcd-qualitygate.started`. Bij de goedkeuring "merge op main" stuurt de werkplek-run die logregel als alle automatische gates open zijn; de gate wacht tot er een lokale run is.
 - **`excerpt`:** één regel uit de uitvoer van een mislukte stap, hoogstens 300 tekens, zonder regeleinden. De afzender maskeert geheimen; het Dashboard toont hem als tekst, nooit als HTML.
 - **Achterwaarts compatibel:** een Dashboard met 0.4.0 leest logregels van 0.3.x. Zonder de nieuwe logregels toont het Dashboard minder (geen tussenstand, geen wachtende mensgate). Stuur de nieuwe soorten pas naar een Dashboard dat 0.4.0 kent: een ouder Dashboard weigert ze.
+
+## Stappen per container
+
+Een stap met `level: container` in de configuratie (statische controle, unittests, contracttest, bouwen) draait per container van het deelproduct. Dan staat de container in `subject.content.container` van `taskrun.started`, `taskrun.finished` en de testlogregels. Zonder `container` geldt de stap voor het hele deelproduct. Zo laat het Dashboard per container een eigen rij zien.
 
 ## Voorbeeld: de mensgate wacht
 
@@ -141,6 +146,7 @@ Per stap en per gate een logregel bij het begin en bij het einde, zodat het Dash
 
 ## Versies
 
+- 0.5.0: optioneel `container` bij stappen en tests (een rij per container), `changelog` bij `service.deployed`, en de nieuwe soort `fcd-demo.reset`. Uitbreiding, niet breaking. Stuur de nieuwe soort pas naar een Dashboard dat 0.5.0 kent.
 - 0.4.0: begin en einde per stap en per gate, voor de live weergave. Nieuw: `fcd-qualitygate.started` (met `waitingFor`), `testsuiterun.started`, `fcd-testsuiterun.progressed`; optioneel `excerpt` bij `taskrun.finished` en `steps` bij `pipelinerun.started`. Uitbreiding, niet breaking.
 - 0.3.1: JSON Schema draft-07 (het dialect waarvoor Apicurio Registry compatibiliteit controleert) en een eigen versieveld `x-version`; de inhoud is gelijk gebleven.
 - 0.3.0: showcase `fcd` (de levering van FCD zelf); elke showcase een eigen Dashboard. Het contract staat nu in fcd-dashboard (de aanbieder).

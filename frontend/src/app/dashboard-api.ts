@@ -1,7 +1,16 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { KeyResultView, KpiView, LoglineRow, Overview, TestView } from './model';
+import {
+  Changelog,
+  Command,
+  CommandKind,
+  KeyResultView,
+  KpiView,
+  LoglineRow,
+  Overview,
+  TestView,
+} from './model';
 
 /** The Dashboard API (contracts/dashboard-api.openapi.yaml), via nginx under /api/v1. */
 @Injectable({ providedIn: 'root' })
@@ -39,6 +48,15 @@ export class DashboardApi {
       params: this.params(experiment),
       responseType: 'text',
     });
+  }
+
+  changelog(experiment: string | null): Observable<Changelog[]> {
+    return this.http.get<Changelog[]>('/api/v1/changelog', { params: this.params(experiment) });
+  }
+
+  /** A button of the product owner; the Pipeline agent carries it out. */
+  command(kind: CommandKind, extra: { run?: string; save?: boolean } = {}): Observable<Command> {
+    return this.http.post<Command>('/api/v1/commands', { kind, ...extra });
   }
 
   reportDownloadUrl(experiment: string | null): string {

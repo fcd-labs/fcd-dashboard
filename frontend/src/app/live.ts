@@ -1,6 +1,8 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
+import { DashboardApi } from './dashboard-api';
 import { LiveStream } from './live-stream';
-import { LiveItem, LiveRun, LiveState } from './model';
+import { Command, CommandKind, KeyResultView, LiveItem, LiveRun, LiveState } from './model';
 
 const stepText: Record<string, string> = {
   waiting: 'wachtend',
@@ -9,6 +11,21 @@ const stepText: Record<string, string> = {
   failed: 'mislukt',
   skipped: 'overgeslagen',
   'not-run': 'niet uitgevoerd',
+  backlog: 'backlog',
+};
+
+const commandText: Record<CommandKind, string> = {
+  'start-run': 'Pipeline starten',
+  'approve-release': 'Release goedkeuren',
+  'demo-reset': 'Demo opnieuw',
+};
+
+const commandStatusText: Record<Command['status'], string> = {
+  pending: 'wacht op de Pipeline',
+  claimed: 'de Pipeline is bezig',
+  done: 'gedaan',
+  failed: 'mislukt',
+  rejected: 'geweigerd',
 };
 
 const gateStatusText: Record<string, string> = {
@@ -27,6 +44,7 @@ const marker: Record<string, string> = {
   failed: '✖',
   skipped: '⤼',
   'not-run': '–',
+  backlog: '·',
   pending: '◇',
   deciding: '◈',
   open: '◆',
@@ -47,9 +65,11 @@ const gateMarker: Record<string, string> = {
   selector: 'app-live',
   templateUrl: './live.html',
   styleUrl: './live.css',
+  imports: [NgTemplateOutlet],
 })
 export class Live implements OnInit {
   private readonly stream = inject(LiveStream);
+  private readonly api = inject(DashboardApi);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly experiment = input<string | null>(null);
@@ -57,6 +77,12 @@ export class Live implements OnInit {
 
   protected readonly state = signal<LiveState | null>(null);
   protected readonly connected = signal(false);
+  protected readonly keyResult = signal<KeyResultView | null>(null);
+  /** The confirmation of "Demo opnieuw" is open. */
+  protected readonly confirmReset = signal(false);
+  protected readonly saveFirst = signal(true);
+  protected readonly refused = signal<string | null>(null);
+  private keyResultBusy = false;
   /** The time of the Dashboard, ticking every second (for the running time). */
   protected readonly now = signal(Date.now());
   private offset = 0;
@@ -86,6 +112,7 @@ export class Live implements OnInit {
         this.offset = Date.parse(s.serverTime) - Date.now();
         this.now.set(Date.now() + this.offset);
         this.state.set(s);
+        this.loadKeyResult();
       },
       (c) => this.connected.set(c),
     );
@@ -93,6 +120,41 @@ export class Live implements OnInit {
     this.destroyRef.onDestroy(() => {
       close();
       clearInterval(timer);
+    });
+  }
+
+  private loadKeyResult(): void {
+    if (this.keyResultBusy) return;
+    this.keyResultBusy = true;
+    this.api.keyResult(this.experiment()).subscribe({
+      next: (k) => {
+        this.keyResult.set(k);
+        this.keyResultBusy = false;
+      },
+      error: () => (this.keyResultBusy = false),
+    });
+  }
+
+  /** A command that is still with the Pipeline (pending or claimed). */
+  protected readonly busy = computed<Command | undefined>(() =>
+    this.state()?.commands.find((c) => c.status === 'pending' || c.status === 'claimed'),
+  );
+
+  protected readonly lastCommand = computed<Command | undefined>(() => this.state()?.commands[0]);
+
+  protected readonly running = computed(() =>
+    (this.state()?.runs ?? []).some((r) => r.outcome === 'running' && r.environment === 'lokaal'),
+  );
+
+  protected commandText(c: Command): string {
+    return `${commandText[c.kind]} (${c.requestedBy}): ${commandStatusText[c.status]}${c.message ? ' – ' + c.message : ''}`;
+  }
+
+  protected send(kind: CommandKind, extra: { run?: string; save?: boolean } = {}): void {
+    this.refused.set(null);
+    this.confirmReset.set(false);
+    this.api.command(kind, extra).subscribe({
+      error: (e) => this.refused.set(e?.error?.detail ?? 'De knop werkt nu niet.'),
     });
   }
 

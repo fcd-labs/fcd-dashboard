@@ -59,8 +59,9 @@ fun main(args: Array<String>) {
             user = env("DB_USER"),
             password = env("DB_PASSWORD"),
         )
+    val commands = PostgresCommandStore(store.dataSource)
     embeddedServer(Netty, port = env("PORT", "8080").toInt()) {
-        dashboard(store, env("DEFAULT_EXPERIMENT", "mvp0"), env("SHOWCASE"), config)
+        dashboard(store, env("DEFAULT_EXPERIMENT", "mvp0"), env("SHOWCASE"), config, commands = commands)
     }.start(wait = true)
 }
 
@@ -77,12 +78,13 @@ fun Application.dashboard(
     config: ShowcaseConfig = ShowcaseConfig.EMPTY,
     liveStreamMillis: Long = LIVE_STREAM_MILLIS,
     liveHeartbeatMillis: Long = LIVE_HEARTBEAT_MILLIS,
+    commands: CommandStore = InMemoryCommandStore(),
 ) {
     val reader = LoglineReader()
     val views = Views(store, defaultExperiment, showcase)
     val hub = LiveHub()
-    val live = LiveViews(store, views, config)
-    val kpis = Kpis(views, store)
+    val live = LiveViews(store, views, config, commands)
+    val kpis = Kpis(views, store, config)
     val report = Report(views, kpis)
     val log = LoggerFactory.getLogger("dashboard")
     if (config.showcase != null && showcase.isNotBlank() && config.showcase != showcase) {
@@ -178,6 +180,78 @@ fun Application.dashboard(
                 call.response.headers.append("Content-Disposition", "attachment; filename=\"$name\"")
             }
             call.respondText(text, ContentType.parse("text/markdown; charset=utf-8"))
+        }
+        get("/api/v1/changelog") {
+            call.respond(live.changelogs(call.experimentParam()))
+        }
+        get("/api/v1/commands") {
+            call.respond(commands.recent())
+        }
+        // A button of the product owner. The Dashboard keeps it; the Pipeline agent carries it out.
+        post("/api/v1/commands") {
+            val request =
+                try {
+                    Json.mapper.readValue(call.receiveLimitedJson(), CommandRequest::class.java)
+                } catch (e: com.fasterxml.jackson.core.JacksonException) {
+                    throw InvalidLoglineException("The command is not valid JSON.")
+                }
+            val refusal = live.refusal(request)
+            if (refusal != null) {
+                call.respondProblem(HttpStatusCode.Conflict, "Not now", refusal)
+                return@post
+            }
+            val command =
+                Command(
+                    id =
+                        java.util.UUID
+                            .randomUUID()
+                            .toString(),
+                    kind = request.kind,
+                    run = request.run?.takeIf { request.kind == CommandKinds.APPROVE_RELEASE },
+                    save = request.save?.takeIf { request.kind == CommandKinds.DEMO_RESET },
+                    // No login in mvp0 (approved explain): the one who presses is the approver of the configuration.
+                    requestedBy = config.controls.approver ?: "product owner",
+                    requestedAt = java.time.Instant.now(),
+                )
+            commands.add(command)
+            hub.changed(views.experiment(null))
+            call.respond(HttpStatusCode.Accepted, command)
+        }
+        post("/api/v1/commands/claim") {
+            val kinds =
+                call.request.queryParameters["kind"]
+                    ?.split(",")
+                    ?.toSet()
+                    ?.takeIf { it.isNotEmpty() && CommandKinds.ALL.containsAll(it) }
+                    ?: throw InvalidLoglineException("kind must be one or more of ${CommandKinds.ALL.joinToString()}.")
+            val run = call.request.queryParameters["run"]?.takeIf { it.length <= 200 }
+            val command = commands.claim(kinds, run)
+            if (command == null) {
+                call.respondText("", status = HttpStatusCode.NoContent)
+            } else {
+                hub.changed(views.experiment(null))
+                call.respond(command)
+            }
+        }
+        post("/api/v1/commands/{id}/done") {
+            val id =
+                call.parameters["id"]?.takeIf { runCatching { java.util.UUID.fromString(it) }.isSuccess }
+                    ?: throw InvalidLoglineException("Invalid id.")
+            val body = Json.mapper.readTree(call.receiveLimitedJson())
+            val outcome = body.path("outcome").asText()
+            if (outcome !in CommandKinds.OUTCOMES) throw InvalidLoglineException("outcome must be done, failed or rejected.")
+            val message =
+                body
+                    .path("message")
+                    .asText("")
+                    .take(1000)
+                    .ifBlank { null }
+            if (commands.finish(id, outcome, message)) {
+                hub.changed(views.experiment(null))
+                call.respondText("", status = HttpStatusCode.NoContent)
+            } else {
+                call.respondProblem(HttpStatusCode.NotFound, "Not found", "No open command with this id.")
+            }
         }
         get("/api/v1/tests") {
             call.respond(views.tests(call.experimentParam()))

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "x-version": "0.4.0",
+  "x-version": "0.5.0",
   "$id": "https://github.com/fcd-labs/fcd-demo/contracts/logline.schema.json",
   "title": "Logline",
   "description": "One log line of fcd-demo: a CDEvent (CD Foundation, spec 0.4) with FCD fields in customData. The version of this contract is x-version (semantic versioning). JSON Schema draft-07: the dialect Apicurio Registry checks for compatibility.",
@@ -28,7 +28,8 @@
             "dev.cdevents.artifact.published.0.2.0",
             "dev.cdeventsx.fcd-qualitygate.started.0.1.0",
             "dev.cdeventsx.fcd-qualitygate.evaluated.0.1.0",
-            "dev.cdeventsx.fcd-keyresult.measured.0.1.0"
+            "dev.cdeventsx.fcd-keyresult.measured.0.1.0",
+            "dev.cdeventsx.fcd-demo.reset.0.1.0"
           ]
         },
         "timestamp": { "type": "string", "format": "date-time", "description": "When the activity began or the event happened (UTC)" }

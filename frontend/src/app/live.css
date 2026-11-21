@@ -318,3 +318,140 @@
   row-gap: 0.8em;
   overflow-x: visible;
 }
+
+/* Demo: rows per container, backlog, shortened steps, buttons, key result */
+.row {
+  display: grid;
+  grid-template-columns: 8em 1fr;
+  align-items: start;
+  gap: 0.5em;
+}
+.row + .row {
+  border-top: 1px dashed var(--line);
+  padding-top: 0.4em;
+}
+.row-title {
+  font-weight: 600;
+  padding-top: 0.6em;
+}
+.row-title small {
+  color: var(--muted);
+  font-weight: 400;
+}
+.stop[data-status='backlog'] {
+  opacity: 0.45;
+}
+.stop[data-status='backlog'] .mark {
+  border-style: dashed;
+}
+.stop.is-shortened .mark {
+  outline: 2px dotted var(--amber);
+  outline-offset: 2px;
+}
+.explain.shortened,
+.legend .shortened {
+  color: var(--amber);
+}
+.legend {
+  display: flex;
+  gap: 1.5em;
+  color: var(--muted);
+  font-size: 0.85em;
+}
+.legend [data-status='backlog'] {
+  opacity: 0.7;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0.6em 0;
+}
+.controls button,
+.waiting button {
+  font: inherit;
+  padding: 0.35em 0.9em;
+  border-radius: 0.4em;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+.controls button.primary,
+.waiting button.primary {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+  font-weight: 600;
+}
+.controls button.danger {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.controls button:disabled,
+.waiting button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.waiting button {
+  margin-left: 0.8em;
+}
+.confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.6em;
+  align-items: center;
+  padding: 0.3em 0.6em;
+  border: 1px solid var(--red);
+  border-radius: 0.4em;
+}
+.command {
+  color: var(--muted);
+}
+.command[data-status='failed'],
+.command[data-status='rejected'] {
+  color: var(--red);
+}
+.keyresult-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1em;
+  padding: 0.5em 0.8em;
+  margin: 0.4em 0;
+  border-radius: 0.4em;
+  border: 1px solid var(--green);
+  border-left: 0.35em solid var(--green);
+  background: var(--card);
+}
+.keyresult-bar.bad {
+  border-color: var(--red);
+}
+.kr-label {
+  font-weight: 600;
+}
+.receiver[data-arrived='true'] {
+  color: var(--green);
+}
+.receiver[data-arrived='false'] {
+  color: var(--red);
+  font-weight: 700;
+}
+.receiver .stub {
+  margin-left: 0.25em;
+  padding: 0 0.35em;
+  border: 1px solid currentColor;
+  border-radius: 0.3em;
+  font-size: 0.75em;
+}
+.kr-count {
+  color: var(--muted);
+  margin-left: auto;
+}
+@media (max-width: 700px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}

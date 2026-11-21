@@ -54,7 +54,8 @@ class PostgresEventStore(
     user: String,
     password: String,
 ) : EventStore {
-    private val dataSource =
+    /** Shared with the command store (one database per Dashboard). */
+    val dataSource =
         HikariDataSource(
             HikariConfig().apply {
                 jdbcUrl = url

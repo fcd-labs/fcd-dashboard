@@ -4,6 +4,7 @@ import { forkJoin } from 'rxjs';
 import { DashboardApi } from './dashboard-api';
 import { Live } from './live';
 import {
+  Changelog,
   KeyResultView,
   KpiView,
   LoglineRow,
@@ -13,7 +14,15 @@ import {
   TestView,
 } from './model';
 
-export type Tab = 'live' | 'status' | 'kpis' | 'keyresult' | 'tests' | 'loglines' | 'report';
+export type Tab =
+  | 'live'
+  | 'status'
+  | 'kpis'
+  | 'keyresult'
+  | 'changelog'
+  | 'tests'
+  | 'loglines'
+  | 'report';
 
 const REFRESH_MS = 5000;
 
@@ -83,6 +92,7 @@ export class App {
   protected readonly kpis = signal<KpiView | null>(null);
   protected readonly keyResult = signal<KeyResultView | null>(null);
   protected readonly report = signal<string>('');
+  protected readonly changelog = signal<Changelog[]>([]);
   protected readonly error = signal(false);
   /** Selected sub-product: "product/name". */
   protected readonly selected = signal<string | null>(this.params.get('subproduct'));
@@ -129,6 +139,7 @@ export class App {
       kpis: this.api.kpis(e),
       keyResult: this.api.keyResult(e),
       report: this.api.report(e),
+      changelog: this.api.changelog(e),
     }).subscribe({
       next: (r) => {
         this.overview.set(r.overview);
@@ -137,6 +148,7 @@ export class App {
         this.kpis.set(r.kpis);
         this.keyResult.set(r.keyResult);
         this.report.set(r.report);
+        this.changelog.set(r.changelog);
         this.error.set(false);
       },
       error: () => this.error.set(true),
@@ -166,6 +178,12 @@ export class App {
 
   protected testsOf(subProduct: string): TestView[] {
     return this.tests().filter((t) => t.subProduct === subProduct);
+  }
+
+  protected containersOf(
+    map: Record<string, string> | undefined,
+  ): { name: string; version: string }[] {
+    return Object.entries(map ?? {}).map(([name, version]) => ({ name, version }));
   }
 
   protected containers(sub: SubProductView): { name: string; version: string }[] {

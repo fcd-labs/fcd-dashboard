@@ -171,6 +171,14 @@ export interface KeyResultView {
   complete: number;
   percent?: number;
   incomplete: { orderId: string; tableNumber: number; at: string; missing: string[] }[];
+  version?: string;
+  receivers?: {
+    name: string;
+    title: string;
+    stub: boolean;
+    lastArrived: boolean;
+    arrived: number;
+  }[];
 }
 
 // The live view (GET /api/v1/live/state, and as Server-Sent Events on GET /api/v1/live).
@@ -197,6 +205,7 @@ export type LiveStatus =
   | 'failed'
   | 'skipped'
   | 'not-run'
+  | 'backlog'
   | 'pending'
   | 'deciding'
   | 'open'
@@ -213,8 +222,17 @@ export interface LiveItem {
   reason?: string;
   excerpt?: string;
   explains: string[];
+  container?: string;
+  shortened?: { explain: string; reason?: string; until?: string };
   waitingFor?: WaitingFor;
   tests?: LiveTests;
+}
+
+export interface LiveContainerRow {
+  container: string;
+  title: string;
+  version?: string;
+  items: LiveItem[];
 }
 
 export interface LiveRun {
@@ -238,6 +256,8 @@ export interface LiveRun {
   tag?: string;
   deployed: boolean;
   items: LiveItem[];
+  containers?: Record<string, string>;
+  containerRows?: LiveContainerRow[];
 }
 
 export interface LiveSettings {
@@ -260,4 +280,35 @@ export interface LiveState {
   serverTime: string;
   settings: LiveSettings;
   runs: LiveRun[];
+  controls: Controls;
+  commands: Command[];
+}
+
+export interface Controls {
+  startButton: boolean;
+  demoReset: boolean;
+  approver?: string;
+}
+
+export type CommandKind = 'start-run' | 'approve-release' | 'demo-reset';
+
+export interface Command {
+  id: string;
+  kind: CommandKind;
+  run?: string;
+  save?: boolean;
+  requestedBy: string;
+  requestedAt: string;
+  status: 'pending' | 'claimed' | 'done' | 'failed' | 'rejected';
+  message?: string;
+}
+
+export interface Changelog {
+  product: string;
+  subProduct: string;
+  title?: string;
+  version: string;
+  containers?: Record<string, string>;
+  deployedAt?: string;
+  text: string;
 }

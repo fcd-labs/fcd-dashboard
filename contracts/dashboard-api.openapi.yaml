@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Dashboard API
-  version: 0.4.0
+  version: 0.5.0
   license:
     name: MIT
     identifier: MIT
@@ -11,12 +11,17 @@ info:
     Without the parameter experiment: the experiment of the most recent log line.
     Every showcase has its own Dashboard; the overview says which showcase.
     The live view (/api/v1/live) pushes the state of the running pipelines with Server-Sent Events.
+    The buttons of the product owner are commands (/api/v1/commands): the Dashboard keeps them, the Pipeline agent
+    claims and carries them out. The Dashboard never runs a pipeline itself. No login in mvp0 (approved explain):
+    the name of the one who presses is the approver from the configuration.
 servers:
   - url: /
     description: The backend, reached through the frontend
 tags:
   - name: dashboard
     description: What the Dashboard shows
+  - name: commands
+    description: The buttons of the product owner, carried out by the Pipeline agent
 paths:
   /api/v1/events:
     get:
@@ -168,6 +173,85 @@ paths:
               schema: { type: string }
         '400': { $ref: '#/components/responses/Problem' }
         '406': { $ref: '#/components/responses/Problem' }
+  /api/v1/changelog:
+    get:
+      tags: [dashboard]
+      operationId: getChangelog
+      summary: Per sub-product the changelog of the version deployed last (from the log line service.deployed)
+      parameters:
+        - $ref: '#/components/parameters/experiment'
+      responses:
+        '200':
+          description: The changelogs.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Changelog' } }
+        '400': { $ref: '#/components/responses/Problem' }
+  /api/v1/commands:
+    get:
+      tags: [commands]
+      operationId: getCommands
+      summary: The most recent commands, newest first (to show what the Pipeline did with a button)
+      responses:
+        '200':
+          description: The commands.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Command' } }
+    post:
+      tags: [commands]
+      operationId: createCommand
+      summary: A button of the product owner - start the pipeline, approve the release, or reset the demo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommandRequest' }
+      responses:
+        '202':
+          description: Kept; the Pipeline agent carries it out.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Command' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/v1/commands/claim:
+    post:
+      tags: [commands]
+      operationId: claimCommand
+      summary: For the Pipeline agent - the oldest pending command of these kinds, now claimed
+      parameters:
+        - { name: kind, in: query, required: true, schema: { type: string, pattern: '^[a-z-]+(,[a-z-]+)*$' }, description: 'Kinds, comma separated' }
+        - { name: run, in: query, required: false, schema: { type: string, maxLength: 200 }, description: 'Only commands for this run (approve-release)' }
+      responses:
+        '200':
+          description: The claimed command.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Command' }
+        '204': { description: No pending command. }
+        '400': { $ref: '#/components/responses/Problem' }
+  /api/v1/commands/{id}/done:
+    post:
+      tags: [commands]
+      operationId: finishCommand
+      summary: For the Pipeline agent - the outcome of a claimed command
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outcome]
+              properties:
+                outcome: { type: string, enum: [done, failed, rejected] }
+                message: { type: string, maxLength: 1000 }
+      responses:
+        '204': { description: Recorded. }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
 components:
   parameters:
     experiment:
@@ -433,15 +517,68 @@ components:
               tableNumber: { type: integer }
               at: { type: string, format: date-time }
               missing: { type: array, items: { type: string } }
+        version: { type: string, description: 'Version of the sub-product that measured the last order' }
+        receivers:
+          type: array
+          description: Per receiver - did the last order arrive; stub when a stub stands in for it (configuration)
+          items:
+            type: object
+            required: [name, title, stub, lastArrived, arrived]
+            properties:
+              name: { type: string }
+              title: { type: string }
+              stub: { type: boolean }
+              lastArrived: { type: boolean }
+              arrived: { type: integer }
     LiveState:
       type: object
-      required: [showcase, experiment, serverTime, settings, runs]
+      required: [showcase, experiment, serverTime, settings, runs, controls, commands]
       properties:
         showcase: { type: string }
         experiment: { type: string }
         serverTime: { type: string, format: date-time, description: 'For the running time in the browser' }
         settings: { $ref: '#/components/schemas/LiveSettings' }
         runs: { type: array, items: { $ref: '#/components/schemas/LiveRun' } }
+        controls: { $ref: '#/components/schemas/Controls' }
+        commands: { type: array, items: { $ref: '#/components/schemas/Command' }, description: 'Pending and recent commands, newest first' }
+    Controls:
+      type: object
+      description: Which buttons the Dashboard shows (configuration of the showcase).
+      required: [startButton, demoReset]
+      properties:
+        startButton: { type: boolean, description: 'Pipeline.spec.trigger is dashboard-button' }
+        demoReset: { type: boolean, description: 'Demo mode: Pipeline.spec.demo is set' }
+        approver: { type: string, description: 'Who presses (QualityGate human, spec.approver)' }
+    CommandRequest:
+      type: object
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [start-run, approve-release, demo-reset] }
+        run: { type: string, maxLength: 200, description: 'approve-release: the run that waits at the human gate' }
+        save: { type: boolean, description: 'demo-reset: keep the run and the status report first' }
+    Command:
+      type: object
+      required: [id, kind, requestedBy, requestedAt, status]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [start-run, approve-release, demo-reset] }
+        run: { type: string }
+        save: { type: boolean }
+        requestedBy: { type: string }
+        requestedAt: { type: string, format: date-time }
+        status: { type: string, enum: [pending, claimed, done, failed, rejected] }
+        message: { type: string }
+    Changelog:
+      type: object
+      required: [product, subProduct, version, text]
+      properties:
+        product: { type: string }
+        subProduct: { type: string }
+        title: { type: string }
+        version: { type: string }
+        containers: { type: object, additionalProperties: { type: string } }
+        deployedAt: { type: string, format: date-time }
+        text: { type: string, description: 'Markdown (Keep a Changelog); shown as text, never as HTML' }
     LiveSettings:
       type: object
       description: From the configuration of the showcase (kind Dashboard, spec.live); defaults without configuration.
@@ -490,7 +627,19 @@ components:
             failures: { type: string }
         tag: { type: string }
         deployed: { type: boolean }
-        items: { type: array, items: { $ref: '#/components/schemas/LiveItem' } }
+        containers: { type: object, additionalProperties: { type: string }, description: 'Container versions in this version of the sub-product' }
+        items: { type: array, items: { $ref: '#/components/schemas/LiveItem' }, description: 'The row of the sub-product' }
+        containerRows:
+          type: array
+          description: Per container of the sub-product a row with the steps of level container (up to building).
+          items:
+            type: object
+            required: [container, title, items]
+            properties:
+              container: { type: string }
+              title: { type: string }
+              version: { type: string }
+              items: { type: array, items: { $ref: '#/components/schemas/LiveItem' } }
     LiveItem:
       type: object
       description: A CI step or a quality gate on the line, in the order of the configuration.
@@ -501,14 +650,23 @@ components:
         title: { type: string }
         status:
           type: string
-          description: Step - waiting, running, succeeded, failed, skipped, not-run. Gate - pending, deciding, waiting (for a human), open, closed, not-run.
-          enum: [waiting, running, succeeded, failed, skipped, not-run, pending, deciding, open, closed]
+          description: Step - waiting, running, succeeded, failed, skipped, not-run, backlog (not built yet). Gate - pending, deciding, waiting (for a human), open, closed, not-run.
+          enum: [waiting, running, succeeded, failed, skipped, not-run, backlog, pending, deciding, open, closed]
         step: { type: integer }
         startedAt: { type: string, format: date-time }
         seconds: { type: number }
         reason: { type: string }
         excerpt: { type: string }
         explains: { type: array, items: { type: string } }
+        container: { type: string }
+        shortened:
+          type: object
+          description: A step shortened for the demo, with its approved explain (configuration Step.spec.shortened)
+          required: [explain]
+          properties:
+            explain: { type: string }
+            reason: { type: string }
+            until: { type: string }
         waitingFor: { $ref: '#/components/schemas/WaitingFor' }
         tests:
           type: object

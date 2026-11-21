@@ -23,11 +23,19 @@ data class LiveTests(
     val finished: Boolean,
 )
 
+data class Shortened(
+    val explain: String,
+    val reason: String? = null,
+    val until: String? = null,
+)
+
 data class LiveItem(
     val kind: String,
     val name: String,
     val title: String,
     val status: String,
+    val container: String? = null,
+    val shortened: Shortened? = null,
     val step: Int? = null,
     val startedAt: Instant? = null,
     val seconds: Double? = null,
@@ -66,6 +74,25 @@ data class LiveRun(
     val tag: String?,
     val deployed: Boolean,
     val items: List<LiveItem>,
+    val containers: Map<String, String> = emptyMap(),
+    val containerRows: List<LiveContainerRow> = emptyList(),
+)
+
+data class LiveContainerRow(
+    val container: String,
+    val title: String,
+    val version: String?,
+    val items: List<LiveItem>,
+)
+
+data class Changelog(
+    val product: String,
+    val subProduct: String,
+    val title: String,
+    val version: String,
+    val containers: Map<String, String>,
+    val deployedAt: Instant,
+    val text: String,
 )
 
 data class LiveState(
@@ -74,6 +101,8 @@ data class LiveState(
     val serverTime: Instant,
     val settings: LiveSettings,
     val runs: List<LiveRun>,
+    val controls: Controls = Controls(),
+    val commands: List<Command> = emptyList(),
 )
 
 /** Tells the open live streams that a new log line arrived (one backend per showcase: in memory is enough). */
@@ -94,7 +123,87 @@ class LiveViews(
     private val store: EventStore,
     private val views: Views,
     private val config: ShowcaseConfig,
+    private val commands: CommandStore = InMemoryCommandStore(),
 ) {
+    /** Why a button cannot be pressed now, or null when it can. */
+    fun refusal(request: CommandRequest): String? {
+        val controls = config.controls
+        val open = commands.recent(50).filter { it.status == "pending" || it.status == "claimed" }
+        val running = state(null).runs.filter { it.outcome == "running" && it.environment == "lokaal" }
+        return when (request.kind) {
+            CommandKinds.START_RUN -> {
+                when {
+                    !controls.startButton -> "This showcase does not start the pipeline with a button (Pipeline.spec.trigger)."
+
+                    open.any {
+                        it.kind == CommandKinds.START_RUN || it.kind == CommandKinds.DEMO_RESET
+                    } -> "The Pipeline is already busy with a command."
+
+                    running.isNotEmpty() -> "A pipeline is running."
+
+                    else -> null
+                }
+            }
+
+            CommandKinds.APPROVE_RELEASE -> {
+                when {
+                    request.run.isNullOrBlank() -> "Which run? (run)"
+
+                    running.none { it.run == request.run && it.waitingFor != null } -> "This run does not wait for an approval."
+
+                    open.any {
+                        it.kind == CommandKinds.APPROVE_RELEASE && it.run == request.run
+                    } -> "Already approved; the Pipeline is on it."
+
+                    else -> null
+                }
+            }
+
+            CommandKinds.DEMO_RESET -> {
+                when {
+                    !controls.demoReset -> "Demo mode is off (Pipeline.spec.demo)."
+                    open.isNotEmpty() -> "The Pipeline is already busy with a command."
+                    running.isNotEmpty() -> "A pipeline is running; reset after it."
+                    else -> null
+                }
+            }
+
+            else -> {
+                "Unknown command ${request.kind}."
+            }
+        }
+    }
+
+    /** Per sub-product the changelog of the version deployed last (log line service.deployed with a changelog). */
+    fun changelogs(requested: String?): List<Changelog> =
+        store
+            .all(views.experiment(requested))
+            .filter { it.shortType == "service.deployed" && it.content.path("changelog").isTextual }
+            .groupBy { it.product to it.subProduct }
+            .map { (_, l) ->
+                val last = l.last()
+                Changelog(
+                    product = last.product,
+                    subProduct = last.subProduct,
+                    title = config.subProductTitle(last.subProduct),
+                    version =
+                        last.custom
+                            .path("subProduct")
+                            .path("version")
+                            .asText(),
+                    containers = last.containers(),
+                    deployedAt = last.timestamp,
+                    text = last.content.path("changelog").asText(),
+                )
+            }.sortedBy { it.subProduct }
+
+    private fun Logline.containers(): Map<String, String> =
+        custom
+            .path("subProduct")
+            .path("containers")
+            .properties()
+            .associate { (k, v) -> k to v.asText() }
+
     fun state(requested: String?): LiveState {
         val experiment = views.experiment(requested)
         val settings = config.live
@@ -121,7 +230,7 @@ class LiveViews(
                         { it.subProduct },
                     ),
                 )
-        return LiveState(views.showcase, experiment, Instant.now(), settings, runs)
+        return LiveState(views.showcase, experiment, Instant.now(), settings, runs, config.controls, commands.recent(10))
     }
 
     private class StepState(
@@ -149,42 +258,65 @@ class LiveViews(
 
     private fun run(lines: List<Logline>): LiveRun {
         val first = lines.first()
+        // Keys: "step:<name>" (sub-product), "step:<name>@<container>" (per container), "gate:<name>".
         val steps = linkedMapOf<String, StepState>()
         val gates = linkedMapOf<String, GateState>()
-        // The order on the line: "step:<name>" and "gate:<name>".
         val order = mutableListOf<String>()
-        config.lane.forEach { order += "${it.kind}:${it.name}" }
-        config.lane.forEach {
-            if (it.kind == "step") steps[it.name] = StepState(it.name, it.title) else gates[it.name] = GateState(it.name, it.title)
+        val containers =
+            config.subProducts
+                .firstOrNull { it.name == first.subProduct }
+                ?.containers
+                ?.takeIf { it.isNotEmpty() }
+                ?: lines
+                    .last()
+                    .containers()
+                    .keys
+                    .toList()
+        val configured = config.lane.isNotEmpty()
+        val containerLane = if (configured) config.containerLane else emptyList()
+        val subProductLane = if (configured) config.subProductLane else config.lane
+        subProductLane.forEach {
+            order += "${it.kind}:${it.key}"
+            if (it.kind == "step") steps["step:${it.name}"] = StepState(it.name, it.title) else gates[it.key] = GateState(it.name, it.title)
         }
-        if (config.lane.isEmpty()) {
+        for (c in containers) {
+            containerLane.forEach { steps["step:${it.name}@$c"] = StepState(it.name, it.title) }
+        }
+        if (!configured) {
             lines
                 .firstOrNull { it.shortType == "pipelinerun.started" }
                 ?.content
                 ?.path("steps")
                 ?.filter { it.isTextual }
                 ?.forEach { n ->
-                    if (steps.putIfAbsent(n.asText(), StepState(n.asText(), n.asText())) ==
-                        null
-                    ) {
-                        order += "step:${n.asText()}"
-                    }
+                    if (steps.putIfAbsent("step:${n.asText()}", StepState(n.asText(), n.asText())) == null) order += "step:${n.asText()}"
                 }
         }
         var lastStep: String? = null
 
-        fun stepFor(name: String): StepState {
-            steps[name]?.let { return it }
+        fun stepFor(
+            name: String,
+            container: String?,
+        ): StepState {
+            val key = if (container != null && config.step(name)?.perContainer == true) "step:$name@$container" else "step:$name"
+            steps[key]?.let { return it }
             val s = StepState(name, name)
-            steps[name] = s
+            steps[key] = s
+            if (key.contains('@')) return s
             // An unknown step: after the step that started last, else at the end.
             val at = lastStep?.let { order.indexOf("step:$it") } ?: -1
-            if (at >= 0) order.add(at + 1, "step:$name") else order += "step:$name"
+            if (at >= 0) order.add(at + 1, key) else order += key
             return s
         }
 
-        fun gateFor(name: String): GateState {
+        fun gateFor(
+            name: String,
+            before: String?,
+        ): GateState {
+            // A gate before a step has its own place per step; without beforeSteps (older Pipeline): the first undecided one.
+            before?.let { b -> gates["$name@$b"]?.let { return it } }
             gates[name]?.let { return it }
+            gates.entries.firstOrNull { (k, g) -> k.startsWith("$name@") && g.outcome == null }?.let { return it.value }
             val g = GateState(name, name)
             gates[name] = g
             val at = lastStep?.let { order.indexOf("step:$it") } ?: -1
@@ -195,17 +327,21 @@ class LiveViews(
             return g
         }
 
-        fun testStep(testType: String): StepState? =
-            config.steps.firstOrNull { it.testType == testType }?.let { stepFor(it.name) } ?: lastStep?.let { steps[it] }
+        fun testStep(
+            testType: String,
+            container: String?,
+        ): StepState? =
+            config.steps.firstOrNull { it.testType == testType }?.let { stepFor(it.name, container) } ?: lastStep?.let { steps["step:$it"] }
 
         var finishedLine: Logline? = null
         var tag: String? = null
         var deployed = false
         for (line in lines) {
             val c = line.content
+            val container = c.text("container")
             when (line.shortType) {
                 "taskrun.started", "taskrun.finished" -> {
-                    val s = stepFor(c.path("taskName").asText())
+                    val s = stepFor(c.path("taskName").asText(), container)
                     c
                         .path("title")
                         .asText("")
@@ -222,12 +358,12 @@ class LiveViews(
                         s.excerpt = c.text("excerpt")?.let(::oneLine)
                         if (s.startedAt == null) s.startedAt = line.timestamp
                     }
-                    lastStep = s.name
+                    if (container == null || config.step(s.name)?.perContainer != true) lastStep = s.name
                 }
 
                 "testsuiterun.started", "testsuiterun.progressed", "testsuiterun.finished" -> {
                     val type = c.path("testType").asText()
-                    val s = testStep(type) ?: continue
+                    val s = testStep(type, container) ?: continue
                     val before = s.tests
                     // The final count wins: a finished line carries the begin time, so it can come before the progress.
                     if (before?.finished == true && line.shortType != "testsuiterun.finished") continue
@@ -245,9 +381,10 @@ class LiveViews(
                 }
 
                 "qualitygate.started", "qualitygate.evaluated" -> {
-                    val g = gateFor(c.path("gate").asText())
+                    val g = gateFor(c.path("gate").asText(), c.text("beforeSteps"))
                     if (line.shortType == "qualitygate.started") {
                         g.started = true
+                        g.outcome = null
                         g.waitingFor =
                             c.path("waitingFor").takeIf { it.isObject }?.let {
                                 WaitingFor(it.path("kind").asText("human"), it.path("name").asText(), it.text("action"))
@@ -279,51 +416,79 @@ class LiveViews(
             }
         }
         val running = finishedLine == null
+
+        fun stepItem(
+            s: StepState,
+            container: String?,
+        ): LiveItem {
+            val cfg = config.step(s.name)
+            val shortened =
+                cfg?.shortened?.let { id ->
+                    val e = config.explanations[id]
+                    Shortened(id, e?.reason, e?.until)
+                }
+            return LiveItem(
+                kind = "step",
+                name = s.name,
+                title = s.title,
+                status =
+                    when {
+                        cfg?.backlog == true -> "backlog"
+                        s.finished -> s.outcome ?: "succeeded"
+                        s.startedAt != null && running -> "running"
+                        running -> "waiting"
+                        else -> "not-run"
+                    },
+                container = container,
+                shortened = shortened,
+                step = s.step,
+                startedAt = s.startedAt,
+                seconds = s.seconds,
+                reason = s.reason ?: cfg?.takeIf { it.backlog }?.let { "nog niet gebouwd (backlog)" },
+                excerpt = s.excerpt,
+                tests = s.tests,
+            )
+        }
+
+        fun gateItem(g: GateState) =
+            LiveItem(
+                kind = "gate",
+                name = g.name,
+                title = g.title,
+                status =
+                    when {
+                        g.outcome != null -> g.outcome!!
+                        g.waitingFor != null -> "waiting"
+                        g.started && running -> "deciding"
+                        running -> "pending"
+                        else -> "not-run"
+                    },
+                reason = g.reason,
+                explains = g.explains,
+                waitingFor = g.waitingFor,
+            )
         val items =
             order.map { key ->
                 val (kind, name) = key.split(":", limit = 2)
-                if (kind == "step") {
-                    val s = steps.getValue(name)
-                    LiveItem(
-                        kind = "step",
-                        name = name,
-                        title = s.title,
-                        status =
-                            when {
-                                s.finished -> s.outcome ?: "succeeded"
-                                s.startedAt != null && running -> "running"
-                                running -> "waiting"
-                                else -> "not-run"
-                            },
-                        step = s.step,
-                        startedAt = s.startedAt,
-                        seconds = s.seconds,
-                        reason = s.reason,
-                        excerpt = s.excerpt,
-                        tests = s.tests,
-                    )
-                } else {
-                    val g = gates.getValue(name)
-                    LiveItem(
-                        kind = "gate",
-                        name = name,
-                        title = g.title,
-                        status =
-                            when {
-                                g.outcome != null -> g.outcome!!
-                                g.waitingFor != null -> "waiting"
-                                g.started && running -> "deciding"
-                                running -> "pending"
-                                else -> "not-run"
-                            },
-                        reason = g.reason,
-                        explains = g.explains,
-                        waitingFor = g.waitingFor,
+                if (kind == "step") stepItem(steps.getValue(key), null) else gateItem(gates.getValue(name))
+            }
+        val versions = lines.last().containers()
+        val containerRows =
+            if (containerLane.isEmpty()) {
+                emptyList()
+            } else {
+                containers.map { c ->
+                    LiveContainerRow(
+                        container = c,
+                        title = config.containerTitle(c),
+                        version = versions[c],
+                        items = containerLane.map { stepItem(steps.getValue("step:${it.name}@$c"), c) },
                     )
                 }
             }
+        val all = containerRows.flatMap { it.items } + items
         val outcome = finishedLine?.content?.path("outcome")?.asText() ?: "running"
-        val failedStep = items.firstOrNull { it.kind == "step" && it.status == "failed" }
+        val failedStep = all.firstOrNull { it.kind == "step" && it.status == "failed" }
         val closedGate = items.firstOrNull { it.kind == "gate" && it.status == "closed" }
         val c = first.custom
         return LiveRun(
@@ -352,7 +517,7 @@ class LiveViews(
             failure =
                 failedStep?.let {
                     LiveFailure(
-                        it.title,
+                        listOfNotNull(it.title, it.container?.let(config::containerTitle)).joinToString(" – "),
                         it.reason,
                         it.excerpt,
                         it.tests
@@ -364,6 +529,8 @@ class LiveViews(
             tag = tag,
             deployed = deployed,
             items = items,
+            containers = versions,
+            containerRows = containerRows,
         )
     }
 
