@@ -155,6 +155,12 @@ export class App {
     });
   }
 
+  /** "demo-20261121-131229" -> "demo 21-11 13:12"; other names as they are. */
+  protected experimentLabel(e: string): string {
+    const m = /^([a-z]+)-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})/.exec(e);
+    return m ? `${m[1]} ${m[4]}-${m[3]} ${m[5]}:${m[6]}` : e;
+  }
+
   protected chooseExperiment(value: string): void {
     this.experiment.set(value);
     this.selected.set(null);

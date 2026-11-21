@@ -5,15 +5,12 @@
   [style.--scale]="presentation() ? (state()?.settings?.presentation?.fontScale ?? 1.5) : 1"
   aria-live="polite"
 >
-  <header class="head">
-    <h2>{{ title() }}</h2>
-    <span class="conn" [class.on]="connected()">
-      {{ connected() ? 'live' : 'verbinden…' }}
-      @if (state(); as s) {
-        · experiment {{ s.experiment }}
-      }
-    </span>
-  </header>
+  @if (presentation()) {
+    <header class="head">
+      <h2>{{ title() }}</h2>
+      <span class="conn" [class.on]="connected()">{{ connected() ? 'live' : 'verbinden…' }}</span>
+    </header>
+  }
 
   @if (state(); as s) {
     @for (v of s.running; track v.product + '/' + v.subProduct) {
@@ -108,20 +105,12 @@
             </span>
           }
         }
-        @if (busy(); as c) {
-          <span class="command" [attr.data-status]="c.status">⏳ {{ commandText(c) }}</span>
-        } @else if (lastCommand(); as c) {
-          <span class="command" [attr.data-status]="c.status">{{ commandText(c) }}</span>
-        }
-        @if (refused(); as r) {
-          <span class="command" data-status="rejected" role="alert">{{ r }}</span>
-        }
       </div>
     }
 
     @if (runs().length === 0) {
       <p class="none">
-        Nog geen runs in experiment {{ s.experiment }}.
+        Nog geen runs in deze demo.
         @if (s.controls.startButton) {
           Start de pipeline met de knop.
         } @else {
@@ -146,6 +135,11 @@
                 · <strong class="spoed">noodpatch</strong>
               }
             </span>
+            @if (r.startGate; as g) {
+              <span class="start-gate" [attr.data-status]="g.status" [title]="g.reason ?? ''"
+                >◆ {{ g.title }} {{ statusText(g) }}</span
+              >
+            }
             <span class="time">{{ runTime(r) }}</span>
           </h3>
 
@@ -166,13 +160,46 @@
                   >{{ r.title }} <small>{{ r.version }}</small></span
                 >
               }
-              <ng-container *ngTemplateOutlet="line; context: { $implicit: r.items }" />
+              @if (r.containerRows?.length) {
+                <div class="joined">
+                  <span
+                    class="join"
+                    [attr.data-status]="joinStatus(r)"
+                    title="Bestellen begint als frontend en backend gebouwd zijn"
+                    ><span class="join-mark" aria-hidden="true">⇉</span>
+                    <span class="label">{{ joinLabel(r) }}</span>
+                    <span class="state">{{ joinText(r) }}</span></span
+                  >
+                  <ng-container *ngTemplateOutlet="line; context: { $implicit: r.items }" />
+                </div>
+              } @else {
+                <ng-container *ngTemplateOutlet="line; context: { $implicit: r.items }" />
+              }
             </div>
           }
-
+        </article>
+      }
+    </div>
+    <section class="messages" aria-label="Meldingen" [attr.data-count]="messageCount()">
+      <h4>
+        Meldingen ({{ messageCount() }})
+        @if (!presentation()) {
+          <span class="conn" [class.on]="connected()"
+            >{{ connected() ? 'live' : 'verbinden…' }} · {{ demoLabel(s.experiment) }}</span
+          >
+        }
+      </h4>
+      <div class="messages-list" tabindex="0">
+        @if (refused(); as rf) {
+          <p class="msg" data-kind="error" role="alert">✖ {{ rf }}</p>
+        }
+        @if (busy(); as c) {
+          <p class="msg" data-kind="info">⏳ {{ commandText(c) }}</p>
+        }
+        @for (r of runs(); track r.product + '/' + r.subProduct) {
           @if (r.waitingFor; as w) {
-            <p class="waiting">
-              ⏸ Wacht op {{ w.name }}
+            <p class="msg" data-kind="waiting">
+              ⏸ {{ r.title }}: wacht op {{ w.name }}
               @if (w.action) {
                 – {{ w.action }}
               }
@@ -190,7 +217,7 @@
             </p>
           }
           @if (r.failure; as f) {
-            <div class="failure">
+            <div class="msg failure" data-kind="error">
               <p>
                 ✖ <strong>{{ f.title }}</strong>
                 @if (f.reason) {
@@ -205,10 +232,10 @@
             </div>
           }
           @if (!r.failure && gateClosed(r); as g) {
-            <p class="closed">{{ g.title }} dicht: {{ g.reason }}</p>
+            <p class="msg closed" data-kind="error">{{ g.title }} dicht: {{ g.reason }}</p>
           }
           @if (r.outcome !== 'running') {
-            <p class="outcome">
+            <p class="msg outcome" [attr.data-kind]="r.outcome === 'success' ? 'ok' : 'error'">
               {{ r.outcome === 'success' ? '✔ Gelukt' : '✖ Mislukt' }} in {{ clock(r.seconds) }} –
               {{ r.title }} {{ r.version }}
               @if (r.deployed) {
@@ -222,9 +249,15 @@
               }
             </p>
           }
-        </article>
-      }
-    </div>
+        }
+        @if (!busy() && lastCommand(); as c) {
+          <p class="msg" data-kind="info" [attr.data-status]="c.status">{{ commandText(c) }}</p>
+        }
+        @if (messageCount() === 0) {
+          <p class="msg none">Geen meldingen.</p>
+        }
+      </div>
+    </section>
     <p class="legend">
       <span data-status="backlog">· backlog: nog niet gebouwd</span>
       <span class="shortened">✂ ingekort voor de demo (afwijking)</span>

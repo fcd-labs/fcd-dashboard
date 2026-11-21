@@ -167,20 +167,22 @@ class DemoTest {
         val frontend = r.containerRows[0]
         assertEquals("frontend", frontend.title)
         assertEquals("1.0.0", frontend.version)
-        assertEquals(listOf("lint", "unit-tests", "coverage"), frontend.items.map { it.name })
-        assertEquals(listOf("succeeded", "waiting", "backlog"), frontend.items.map { it.status })
+        // The code gate closes after the steps per container only: on the rows, before building.
+        assertEquals(listOf("lint", "unit-tests", "coverage", "code"), frontend.items.map { it.name })
+        assertEquals(listOf("succeeded", "waiting", "backlog", "pending"), frontend.items.map { it.status })
         assertEquals("failed", r.containerRows[1].items[0].status)
 
+        // The human gate at the start is in the head of the run; the row of the sub-product begins after building.
+        assertEquals("open", r.startGate?.status)
         assertEquals(
-            listOf("gate:human", "gate:code", "step:build", "step:e2e", "step:dast", "step:perf", "gate:human", "step:release"),
+            listOf("step:build", "step:e2e", "step:dast", "step:perf", "gate:human", "step:release"),
             r.items.map { "${it.kind}:${it.name}" },
         )
-        assertEquals("open", r.items[0].status)
-        assertEquals("waiting", r.items[6].status)
+        assertEquals("waiting", r.items[4].status)
         assertEquals("Johannes", r.waitingFor?.name)
-        assertEquals("backlog", r.items[4].status)
-        assertEquals("EXP-9", r.items[3].shortened?.explain)
-        assertEquals("Alleen het kernpad in de demo", r.items[3].shortened?.reason)
+        assertEquals("backlog", r.items[2].status)
+        assertEquals("EXP-9", r.items[1].shortened?.explain)
+        assertEquals("Alleen het kernpad in de demo", r.items[1].shortened?.reason)
         assertEquals("Statisch – backend", r.failure?.title)
         assertEquals(mapOf("orders-frontend" to "1.0.0", "orders-backend" to "1.0.1"), r.containers)
     }

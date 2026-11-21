@@ -260,6 +260,7 @@ export interface LiveRun {
   items: LiveItem[];
   containers?: Record<string, string>;
   containerRows?: LiveContainerRow[];
+  startGate?: LiveItem;
 }
 
 export interface LiveSettings {

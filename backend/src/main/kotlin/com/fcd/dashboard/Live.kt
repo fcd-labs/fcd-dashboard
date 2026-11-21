@@ -76,6 +76,8 @@ data class LiveRun(
     val items: List<LiveItem>,
     val containers: Map<String, String> = emptyMap(),
     val containerRows: List<LiveContainerRow> = emptyList(),
+    /** The gate before the first step (the human gate at the start), shown in the head of the run. */
+    val startGate: LiveItem? = null,
 )
 
 data class LiveContainerRow(
@@ -370,12 +372,14 @@ class LiveViews(
         val configured = config.lane.isNotEmpty()
         val containerLane = if (configured) config.containerLane else emptyList()
         val subProductLane = if (configured) config.subProductLane else config.lane
+        // Every gate of the configuration has its state (on a row, or the start gate in the head); the order is the row.
+        (if (configured) config.lane else emptyList()).filter { it.kind == "gate" }.forEach { gates[it.key] = GateState(it.name, it.title) }
         subProductLane.forEach {
             order += "${it.kind}:${it.key}"
             if (it.kind == "step") steps["step:${it.name}"] = StepState(it.name, it.title) else gates[it.key] = GateState(it.name, it.title)
         }
         for (c in containers) {
-            containerLane.forEach { steps["step:${it.name}@$c"] = StepState(it.name, it.title) }
+            containerLane.filter { it.kind == "step" }.forEach { steps["step:${it.name}@$c"] = StepState(it.name, it.title) }
         }
         if (!configured) {
             lines
@@ -587,7 +591,16 @@ class LiveViews(
                         container = c,
                         title = config.containerTitle(c),
                         version = versions[c],
-                        items = containerLane.map { stepItem(steps.getValue("step:${it.name}@$c"), c) },
+                        items =
+                            containerLane.map {
+                                if (it.kind ==
+                                    "step"
+                                ) {
+                                    stepItem(steps.getValue("step:${it.name}@$c"), c)
+                                } else {
+                                    gateItem(gates.getValue(it.key))
+                                }
+                            },
                     )
                 }
             }
@@ -636,6 +649,11 @@ class LiveViews(
             items = items,
             containers = versions,
             containerRows = containerRows,
+            startGate =
+                config.startGates
+                    .firstOrNull()
+                    ?.let { gates[it.key] }
+                    ?.let(::gateItem),
         )
     }
 

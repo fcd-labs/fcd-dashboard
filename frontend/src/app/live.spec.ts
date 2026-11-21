@@ -350,7 +350,7 @@ describe('Live', () => {
     };
     stream.onState(state([], demo, [c]));
     fixture.detectChanges();
-    expect(flat(el.querySelector('.command')?.textContent)).toBe(
+    expect(flat(el.querySelector('.messages .msg[data-kind="info"]')?.textContent)).toBe(
       '⏳ Pipeline starten (Johannes): de Pipeline is bezig',
     );
     api.refuse = 'A pipeline is running.';
@@ -410,8 +410,9 @@ describe('Live', () => {
     expect(stream.experiment).toBe('sim');
     expect(el.textContent).toContain('wordt geladen');
     push([]);
-    expect(el.querySelector('.conn')?.textContent).toContain('live');
-    expect(el.textContent).toContain('Nog geen runs in experiment sim');
+    expect(el.querySelector('.messages .conn')?.textContent).toContain('live');
+    expect(el.textContent).toContain('Nog geen runs in deze demo');
+    expect(flat(el.querySelector('.messages .msg.none')?.textContent)).toBe('Geen meldingen.');
     fixture.destroy();
     expect(stream.closed).toBe(true);
   });
@@ -444,14 +445,17 @@ describe('Live', () => {
     push([failed]);
     const lane = el.querySelector('.lane')!;
     expect(lane.getAttribute('data-outcome')).toBe('failure');
-    expect(flat(lane.querySelector('.failure')?.textContent)).toContain(
+    // The messages and errors are in their one fixed place, under the runs.
+    const box = el.querySelector('.messages')!;
+    expect(flat(box.querySelector('h4')?.textContent)).toContain('Meldingen (2)');
+    expect(flat(box.querySelector('.failure')?.textContent)).toContain(
       'Unittests – 1 van 31 tests mislukt',
     );
-    expect(lane.querySelector('.excerpt')?.textContent).toContain('expected status 400');
+    expect(box.querySelector('.excerpt')?.textContent).toContain('expected status 400');
     // The failure already says why; the closed gate is on the line (no repeat underneath).
-    expect(lane.querySelector('.closed')).toBeNull();
-    expect(flat(lane.querySelector('.outcome')?.textContent)).toContain('✖ Mislukt in 0:40');
-    expect(lane.querySelector('.outcome a')?.getAttribute('href')).toBe(
+    expect(box.querySelector('.closed')).toBeNull();
+    expect(flat(box.querySelector('.outcome')?.textContent)).toContain('✖ Mislukt in 0:40');
+    expect(box.querySelector('.outcome a')?.getAttribute('href')).toBe(
       '/?experiment=sim&subproduct=shop%2Fpayments&run=payments-r1',
     );
     expect(lane.querySelector('[data-name="build"]')?.textContent).toContain('niet uitgevoerd');
@@ -460,8 +464,8 @@ describe('Live', () => {
   it('shows that the pipeline waits for a human', () => {
     create();
     push([waiting]);
-    expect(flat(el.querySelector('.waiting')?.textContent)).toBe(
-      '⏸ Wacht op Pat – merge op main met een hogere versie',
+    expect(flat(el.querySelector('.messages .msg[data-kind="waiting"]')?.textContent)).toContain(
+      'wacht op Pat – merge op main met een hogere versie',
     );
     expect(el.querySelector('[data-name="human"]')?.textContent).toContain('wacht');
   });
@@ -471,7 +475,7 @@ describe('Live', () => {
     push([{ ...failed, started: '2026-11-26T08:00:00Z' }]);
     expect(el.querySelector('.lane')?.classList).toContain('small');
     expect(el.querySelector('.lane .line')).toBeNull();
-    expect(el.querySelector('.lane .outcome')).not.toBeNull();
+    expect(el.querySelector('.messages .outcome')).not.toBeNull();
   });
 
   it('in presentation mode: title, theme and size from the configuration, running sub-products first, no links', () => {

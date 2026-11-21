@@ -118,14 +118,33 @@ class ShowcaseConfig(
 
     /** The row of a container: the steps of level container, with the backlog steps that come after one of them. */
     val containerLane: List<LaneEntry> by lazy {
-        withBacklog(
-            steps.filter { it.perContainer }.map { LaneEntry("step", it.name, it.title) },
-        )
+        // The steps per container, with the gates that close after them only (such as the code gate, before building).
+        withBacklog(lane.filter { it.inContainerRow() })
     }
+
+    /** The gates before the first step (such as the human gate at the start): in the head of the run, not on a row. */
+    val startGates: List<LaneEntry> by lazy {
+        val first = steps.firstOrNull()?.name
+        lane.filter { it.kind == "gate" && first != null && it.before == first }
+    }
+
+    private fun LaneEntry.inContainerRow(): Boolean =
+        when (kind) {
+            "step" -> {
+                step(name)?.perContainer == true
+            }
+
+            else -> {
+                before == null &&
+                    gates.firstOrNull { it.name == name }?.afterSteps?.let { a ->
+                        a.isNotEmpty() && a.all { s -> step(s)?.perContainer == true }
+                    } == true
+            }
+        }
 
     /** The row of the sub-product: the other steps and all gates, with the backlog steps in their place. */
     val subProductLane: List<LaneEntry> by lazy {
-        withBacklog(lane.filterNot { it.kind == "step" && step(it.name)?.perContainer == true })
+        withBacklog(lane.filterNot { it.inContainerRow() || it in startGates })
     }
 
     private fun withBacklog(entries: List<LaneEntry>): List<LaneEntry> {
@@ -134,17 +153,10 @@ class ShowcaseConfig(
             val at = out.indexOfLast { it.kind == "step" && it.name == b.after }
             if (b.after != null && at < 0) continue
             val entry = LaneEntry("step", b.name, b.title)
-            // After the step it follows and after the gates that close behind that step (not before the gate of the next step).
+            // Right after the step it follows, before the gate that decides on it (a missing step belongs to that gate),
+            // and after the backlog steps placed there before, so they keep the order of the configuration.
             var i = if (at < 0) out.size else at + 1
-            // ... and after the backlog steps placed there before, so they keep the order of the configuration.
-            while (i < out.size &&
-                (
-                    (out[i].kind == "gate" && out[i].before == null) ||
-                        backlog.any { it.name == out[i].name && it.after == b.after }
-                )
-            ) {
-                i++
-            }
+            while (i < out.size && backlog.any { it.name == out[i].name && it.after == b.after }) i++
             out.add(i, entry)
         }
         return out

@@ -146,6 +146,54 @@ export class Live implements OnInit {
     });
   }
 
+  /** The row of the sub-product begins when every container is built (the last step of the container rows). */
+  protected joinStatus(r: LiveRun): string {
+    const built = (r.containerRows ?? []).map((c) =>
+      [...c.items].reverse().find((i) => i.kind === 'step' && i.status !== 'backlog'),
+    );
+    const st = built.map((i) => i?.status ?? 'waiting');
+    if (st.some((x) => x === 'failed')) return 'failed';
+    if (st.length && st.every((x) => x === 'succeeded' || x === 'explained')) return 'succeeded';
+    if (st.some((x) => x === 'running' || x === 'succeeded')) return 'running';
+    return r.outcome === 'running' ? 'waiting' : 'not-run';
+  }
+
+  protected joinLabel(r: LiveRun): string {
+    return (r.containerRows ?? []).map((c) => c.title).join(' + ') + ' gebouwd';
+  }
+
+  protected joinText(r: LiveRun): string {
+    return (
+      {
+        succeeded: 'klaar',
+        failed: 'mislukt',
+        running: 'bezig',
+        waiting: 'wacht',
+        'not-run': 'niet bereikt',
+      }[this.joinStatus(r)] ?? ''
+    );
+  }
+
+  /** The messages and errors in their one fixed place. */
+  protected messageCount(): number {
+    let n =
+      (this.refused() ? 1 : 0) +
+      (this.busy() ? 1 : 0) +
+      (!this.busy() && this.lastCommand() ? 1 : 0);
+    for (const r of this.runs()) {
+      n +=
+        (r.waitingFor ? 1 : 0) + (r.failure ? 1 : 0) + (!r.failure && this.gateClosed(r) ? 1 : 0);
+      n += r.outcome !== 'running' ? 1 : 0;
+    }
+    return n;
+  }
+
+  /** "demo-20261121-131229" -> "demo 21-11 13:12". */
+  protected demoLabel(e: string | undefined): string {
+    const m = /^([a-z]+)-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})/.exec(e ?? '');
+    return m ? `${m[1]} ${m[4]}-${m[3]} ${m[5]}:${m[6]}` : (e ?? '');
+  }
+
   /** The containers of the version that runs, short: "frontend 1.0.0 · backend 1.0.1". */
   protected parts(v: RunningVersion): string {
     return Object.entries(v.containers ?? {})

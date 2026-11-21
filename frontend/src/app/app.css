@@ -8,19 +8,26 @@
 .top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: baseline;
   gap: 16px;
   flex-wrap: wrap;
 }
 
 h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
 }
 
 .sub {
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: normal;
+}
+
+.hint {
   margin: 4px 0 0;
   color: var(--muted);
+  font-size: 0.75rem;
 }
 
 .experiment select {
@@ -30,7 +37,7 @@ h1 {
 .tabs {
   display: flex;
   gap: 4px;
-  margin: 16px 0;
+  margin: 8px 0 10px;
   border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
 }

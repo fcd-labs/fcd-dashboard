@@ -1,19 +1,18 @@
 <header class="top">
-  <div>
-    <h1>FCD – Dashboard</h1>
-    <p class="sub">
-      Showcase {{ overview()?.showcase || '…' }} · de cirkel rond: proces en gebruiker
-    </p>
-  </div>
+  <h1>
+    FCD – Dashboard
+    <span class="sub">· Showcase {{ overview()?.showcase || '…' }} · de cirkel rond</span>
+  </h1>
   @if (overview(); as o) {
-    <label class="experiment">
-      Experiment
-      <select (change)="chooseExperiment($any($event.target).value)" aria-label="Experiment">
-        @for (e of o.experiments; track e) {
-          <option [value]="e" [selected]="e === o.experiment">{{ e }}</option>
-        }
-      </select>
-    </label>
+    <select
+      class="experiment"
+      (change)="chooseExperiment($any($event.target).value)"
+      aria-label="Demo kiezen"
+    >
+      @for (e of o.experiments; track e) {
+        <option [value]="e" [selected]="e === o.experiment">{{ experimentLabel(e) }}</option>
+      }
+    </select>
   }
 </header>
 
@@ -56,7 +55,7 @@
   <main>
     @if (tab() === 'live') {
       <app-live [experiment]="experiment()" />
-      <p class="empty">
+      <p class="hint">
         Toets <kbd>P</kbd>: presentatiemodus voor een groot scherm (<kbd>Esc</kbd>: terug).
       </p>
     }

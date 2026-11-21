@@ -675,9 +675,10 @@ components:
         deployed: { type: boolean }
         containers: { type: object, additionalProperties: { type: string }, description: 'Container versions in this version of the sub-product' }
         items: { type: array, items: { $ref: '#/components/schemas/LiveItem' }, description: 'The row of the sub-product' }
+        startGate: { $ref: '#/components/schemas/LiveItem' }
         containerRows:
           type: array
-          description: Per container of the sub-product a row with the steps of level container (up to building).
+          description: Per container of the sub-product a row with the steps of level container (up to building), and the gates that close after them only (such as the code gate).
           items:
             type: object
             required: [container, title, items]

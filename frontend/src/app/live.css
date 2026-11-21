@@ -564,3 +564,131 @@
     flex-wrap: wrap;
   }
 }
+
+/* Two rows: frontend and backend each on their own line. */
+.container-rows {
+  grid-template-columns: 1fr;
+}
+.container-rows .row + .row {
+  border-top: 1px dotted var(--line);
+  padding-top: 0.2em;
+}
+/* Bestellen begins when frontend and backend are built: the join at the start of its row. */
+.joined {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+}
+.joined > .line {
+  flex: 1;
+  min-width: 0;
+}
+.join {
+  flex: 0 0 6.5em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  font-size: 0.78em;
+  line-height: 1.25;
+  border-left: 3px solid var(--line);
+  border-top: 3px solid var(--line);
+  border-top-left-radius: 0.6em;
+  padding-top: 0.1em;
+  margin-top: -0.6em;
+}
+.join-mark {
+  width: 1.5em;
+  height: 1.5em;
+  line-height: 1.4em;
+  border-radius: 0.3em;
+  border: 2px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+}
+.join[data-status='succeeded'],
+.join[data-status='succeeded'] .join-mark {
+  border-color: var(--green);
+  color: var(--green);
+}
+.join[data-status='failed'],
+.join[data-status='failed'] .join-mark {
+  border-color: var(--red);
+  color: var(--red);
+}
+.join[data-status='running'] .join-mark {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.join .state {
+  color: var(--muted);
+}
+.start-gate {
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--muted);
+}
+.start-gate[data-status='open'] {
+  color: var(--green);
+}
+/* The messages and errors: one fixed place, scrollable, with a shadow when there is more. */
+.messages {
+  margin-top: 0.5em;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+}
+.messages h4 {
+  margin: 0;
+  padding: 0.3em 0.8em;
+  font-size: 0.8em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+.messages-list {
+  height: 7.5em;
+  overflow-y: auto;
+  padding: 0.3em 0.8em;
+  background:
+    linear-gradient(var(--card) 30%, transparent) center top,
+    linear-gradient(transparent, var(--card) 70%) center bottom,
+    radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.18), transparent) center top,
+    radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.18), transparent) center bottom;
+  background-repeat: no-repeat;
+  background-size:
+    100% 2em,
+    100% 2em,
+    100% 0.7em,
+    100% 0.7em;
+  background-attachment: local, local, scroll, scroll;
+}
+.msg {
+  margin: 0.15em 0;
+}
+.msg p {
+  margin: 0;
+}
+.msg[data-kind='error'] {
+  color: var(--red);
+}
+.msg[data-kind='waiting'] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--amber) 22%, transparent);
+  border-radius: 0.3em;
+  padding: 0.2em 0.4em;
+}
+.msg[data-kind='ok'] {
+  color: var(--green);
+}
+.msg[data-kind='info'],
+.msg.none {
+  color: var(--muted);
+}
+.messages h4 {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+}
+.messages h4 .conn {
+  font-weight: normal;
+}
