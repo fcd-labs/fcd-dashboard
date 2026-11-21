@@ -3,6 +3,9 @@
     FCD – Dashboard
     <span class="sub">· Showcase {{ overview()?.showcase || '…' }} · de cirkel rond</span>
   </h1>
+  @if (tab() === 'live' && !presentation()) {
+    <app-demo-controls />
+  }
   @if (overview(); as o) {
     <select
       class="experiment"
@@ -52,7 +55,7 @@
     </p>
   }
 
-  <main>
+  <main [class.live-tab]="tab() === 'live'">
     @if (tab() === 'live') {
       <app-live [experiment]="experiment()" />
     }

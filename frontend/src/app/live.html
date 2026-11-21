@@ -28,66 +28,6 @@
           }
         </p>
       }
-      @if (s.controls.startButton || s.controls.demoReset) {
-        <div class="controls">
-          @if (s.controls.startButton) {
-            <button
-              type="button"
-              class="primary"
-              data-command="start-run"
-              [disabled]="running() || !!busy()"
-              (click)="send('start-run')"
-            >
-              ▶ Pipeline starten{{ s.controls.approver ? ' (' + s.controls.approver + ')' : '' }}
-            </button>
-          }
-          @if (s.controls.demoReset && !presentation() && s.demo?.phase === 'start') {
-            <button
-              type="button"
-              class="small"
-              data-command="demo-merge"
-              [disabled]="running() || !!busy()"
-              (click)="send('demo-merge')"
-              [title]="'Merge ' + s.demo!.unmerged.join(', ')"
-            >
-              ⇄ Patch mergen
-            </button>
-          } @else if (s.controls.demoReset && !presentation()) {
-            @if (!confirmReset()) {
-              <button
-                type="button"
-                class="small"
-                data-command="demo-reset"
-                [disabled]="running() || !!busy()"
-                (click)="confirmReset.set(true)"
-              >
-                ↺ Demo opnieuw
-              </button>
-            } @else {
-              <span class="confirm" role="dialog" aria-label="Demo opnieuw bevestigen">
-                Demo opnieuw?
-                <label
-                  ><input
-                    type="checkbox"
-                    [checked]="saveFirst()"
-                    (change)="saveFirst.set($any($event.target).checked)"
-                  />
-                  eerst bewaren</label
-                >
-                <button
-                  type="button"
-                  class="small danger"
-                  data-command="demo-reset-confirm"
-                  (click)="send('demo-reset', { save: saveFirst() })"
-                >
-                  Ja
-                </button>
-                <button type="button" class="small" (click)="confirmReset.set(false)">Nee</button>
-              </span>
-            }
-          }
-        </div>
-      }
     </div>
 
     <div class="lanes" [attr.data-layout]="s.settings.layout">
@@ -157,14 +97,41 @@
     </div>
     <section class="messages" aria-label="Meldingen" [attr.data-count]="messageCount()">
       <h4>
-        Meldingen ({{ messageCount() }})
+        <span
+          >Meldingen ({{ messageCount() }})
+          <button
+            type="button"
+            class="scroll-btn"
+            aria-label="Meldingen omhoog"
+            [disabled]="!canUp()"
+            (click)="scrollMessages(list, -1)"
+          >
+            ▲
+          </button>
+          <button
+            type="button"
+            class="scroll-btn"
+            aria-label="Meldingen omlaag"
+            [class.more]="canDown()"
+            [disabled]="!canDown()"
+            (click)="scrollMessages(list, 1)"
+          >
+            ▼
+          </button></span
+        >
         @if (!presentation()) {
           <span class="conn" [class.on]="connected()"
             >{{ connected() ? 'live' : 'verbinden…' }} · {{ demoLabel(s.experiment) }}</span
           >
         }
       </h4>
-      <div class="messages-list" tabindex="0">
+      <div
+        class="messages-list"
+        tabindex="0"
+        #list
+        (scroll)="updateScroll(list)"
+        (mouseenter)="updateScroll(list)"
+      >
         @if (refused(); as rf) {
           <p class="msg" data-kind="error" role="alert">✖ {{ rf }}</p>
         }

@@ -2,6 +2,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { DashboardApi } from './dashboard-api';
+import { DemoControls } from './demo-controls';
 import { Live } from './live';
 import {
   Changelog,
@@ -69,7 +70,7 @@ export const triggerText: Record<string, string> = {
 
 @Component({
   selector: 'app-root',
-  imports: [DatePipe, DecimalPipe, Live],
+  imports: [DatePipe, DecimalPipe, Live, DemoControls],
   host: { '(document:keydown)': 'onKey($event)' },
   templateUrl: './app.html',
   styleUrl: './app.css',

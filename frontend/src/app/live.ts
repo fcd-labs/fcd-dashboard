@@ -1,6 +1,16 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
-import { DashboardApi } from './dashboard-api';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnInit,
+  computed,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { LiveStore } from './live-store';
 import { LiveStream } from './live-stream';
 import { Command, CommandKind, LiveItem, LiveRun, LiveState, RunningVersion } from './model';
 
@@ -72,7 +82,7 @@ const gateMarker: Record<string, string> = {
 })
 export class Live implements OnInit {
   private readonly stream = inject(LiveStream);
-  private readonly api = inject(DashboardApi);
+  private readonly store = inject(LiveStore);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly experiment = input<string | null>(null);
@@ -80,10 +90,12 @@ export class Live implements OnInit {
 
   protected readonly state = signal<LiveState | null>(null);
   protected readonly connected = signal(false);
-  /** The confirmation of "Demo opnieuw" is open. */
-  protected readonly confirmReset = signal(false);
-  protected readonly saveFirst = signal(true);
-  protected readonly refused = signal<string | null>(null);
+  /** Why the Dashboard refused the last button (shared with the buttons in the header). */
+  protected readonly refused = this.store.refused;
+  /** The messages can scroll further up or down (shown with the arrows). */
+  protected readonly canUp = signal(false);
+  protected readonly canDown = signal(false);
+  private readonly list = viewChild<ElementRef<HTMLElement>>('list');
   /** The time of the Dashboard, ticking every second (for the running time). */
   protected readonly now = signal(Date.now());
   private offset = 0;
@@ -113,6 +125,12 @@ export class Live implements OnInit {
         this.offset = Date.parse(s.serverTime) - Date.now();
         this.now.set(Date.now() + this.offset);
         this.state.set(s);
+        this.store.state.set(s);
+        // After the new messages are drawn: is there more to scroll to?
+        setTimeout(() => {
+          const l = this.list()?.nativeElement;
+          if (l) this.updateScroll(l);
+        });
       },
       (c) => this.connected.set(c),
     );
@@ -215,11 +233,17 @@ export class Live implements OnInit {
   }
 
   protected send(kind: CommandKind, extra: { run?: string; save?: boolean } = {}): void {
-    this.refused.set(null);
-    this.confirmReset.set(false);
-    this.api.command(kind, extra).subscribe({
-      error: (e) => this.refused.set(e?.error?.detail ?? 'De knop werkt nu niet.'),
-    });
+    this.store.send(kind, extra);
+  }
+
+  /** The arrows of the messages: is there more above or below? */
+  protected updateScroll(list: HTMLElement): void {
+    this.canUp.set(list.scrollTop > 0);
+    this.canDown.set(list.scrollTop + list.clientHeight < list.scrollHeight - 1);
+  }
+
+  protected scrollMessages(list: HTMLElement, direction: 1 | -1): void {
+    list.scrollBy({ top: direction * list.clientHeight * 0.8, behavior: 'smooth' });
   }
 
   protected marker(item: LiveItem): string {

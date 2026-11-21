@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { DashboardApi } from './dashboard-api';
+import { DemoControls } from './demo-controls';
 import { Live } from './live';
 import { LiveStream } from './live-stream';
 import { Command, Controls, KeyResultView, LiveRun, LiveState } from './model';
@@ -196,6 +197,7 @@ describe('Live', () => {
         { provide: DashboardApi, useValue: api },
       ],
     });
+    controls = undefined;
     fixture = TestBed.createComponent(Live);
     fixture.componentRef.setInput('experiment', 'sim');
     fixture.componentRef.setInput('presentation', presentation);
@@ -210,6 +212,14 @@ describe('Live', () => {
   }
 
   afterEach(() => vi.useRealTimers());
+
+  /** The buttons in the header (their own component, on the same state as the live view). */
+  let controls: ComponentFixture<DemoControls> | undefined;
+  function buttons(): HTMLElement {
+    controls ??= TestBed.createComponent(DemoControls);
+    controls.detectChanges();
+    return controls.nativeElement;
+  }
 
   const demo: Controls = { startButton: true, demoReset: true, approver: 'Johannes' };
 
@@ -229,7 +239,7 @@ describe('Live', () => {
     },
   ];
 
-  it('one line: ShowKitchen with what runs and the stubs with their version, the buttons on the same line', () => {
+  it('one line: ShowKitchen with what runs and the stubs with their version, the buttons in the header', () => {
     create();
     const s = state([], demo);
     s.running = runningAt('1.0.0');
@@ -243,7 +253,7 @@ describe('Live', () => {
     expect(flat(bar.querySelector('.stub-versions')?.textContent)).toBe(
       'stubs 1.0.0: keuken · bar',
     );
-    expect(bar.querySelector('[data-command="start-run"]')).not.toBeNull();
+    expect(buttons().querySelector('[data-command="start-run"]')).not.toBeNull();
     // The key result is in its own tab, not on the live view.
     expect(el.querySelector('.keyresult-bar')).toBeNull();
   });
@@ -252,15 +262,19 @@ describe('Live', () => {
     create();
     stream.onState(state([], demo));
     fixture.detectChanges();
-    const start = el.querySelector<HTMLButtonElement>('[data-command="start-run"]')!;
+    const start = buttons().querySelector<HTMLButtonElement>('[data-command="start-run"]')!;
     expect(flat(start.textContent)).toBe('▶ Pipeline starten (Johannes)');
     start.click();
     expect(api.sent).toEqual([{ kind: 'start-run', extra: {} }]);
 
     stream.onState(state([running], demo));
     fixture.detectChanges();
-    expect(el.querySelector<HTMLButtonElement>('[data-command="start-run"]')!.disabled).toBe(true);
-    expect(el.querySelector<HTMLButtonElement>('[data-command="demo-reset"]')!.disabled).toBe(true);
+    expect(buttons().querySelector<HTMLButtonElement>('[data-command="start-run"]')!.disabled).toBe(
+      true,
+    );
+    expect(
+      buttons().querySelector<HTMLButtonElement>('[data-command="demo-reset"]')!.disabled,
+    ).toBe(true);
   });
 
   it('a waiting human gate has a button to approve the release of that run', () => {
@@ -276,10 +290,10 @@ describe('Live', () => {
     create();
     stream.onState(state([], demo));
     fixture.detectChanges();
-    el.querySelector<HTMLButtonElement>('[data-command="demo-reset"]')!.click();
+    buttons().querySelector<HTMLButtonElement>('[data-command="demo-reset"]')!.click();
     fixture.detectChanges();
     expect(api.sent).toEqual([]);
-    el.querySelector<HTMLButtonElement>('[data-command="demo-reset-confirm"]')!.click();
+    buttons().querySelector<HTMLButtonElement>('[data-command="demo-reset-confirm"]')!.click();
     expect(api.sent).toEqual([{ kind: 'demo-reset', extra: { save: true } }]);
   });
 
@@ -290,8 +304,8 @@ describe('Live', () => {
     s.running = runningAt('1.0.0');
     stream.onState(s);
     fixture.detectChanges();
-    expect(el.querySelector('[data-command="demo-reset"]')).toBeNull();
-    const merge = el.querySelector<HTMLButtonElement>('[data-command="demo-merge"]')!;
+    expect(buttons().querySelector('[data-command="demo-reset"]')).toBeNull();
+    const merge = buttons().querySelector<HTMLButtonElement>('[data-command="demo-merge"]')!;
     expect(flat(merge.textContent)).toBe('⇄ Patch mergen');
     expect(merge.getAttribute('title')).toBe('Merge sk-demo patch/1.0.1');
     merge.click();
@@ -299,8 +313,8 @@ describe('Live', () => {
 
     stream.onState({ ...s, demo: { phase: 'merged', unmerged: [] } });
     fixture.detectChanges();
-    expect(el.querySelector('[data-command="demo-merge"]')).toBeNull();
-    expect(el.querySelector('[data-command="demo-reset"]')).not.toBeNull();
+    expect(buttons().querySelector('[data-command="demo-merge"]')).toBeNull();
+    expect(buttons().querySelector('[data-command="demo-reset"]')).not.toBeNull();
   });
 
   it('shows what the Pipeline does with a command, and a refusal', () => {
@@ -320,7 +334,7 @@ describe('Live', () => {
     api.refuse = 'A pipeline is running.';
     stream.onState(state([], demo, [{ ...c, status: 'done', message: 'bestellen: gelukt' }]));
     fixture.detectChanges();
-    el.querySelector<HTMLButtonElement>('[data-command="start-run"]')!.click();
+    buttons().querySelector<HTMLButtonElement>('[data-command="start-run"]')!.click();
     fixture.detectChanges();
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('A pipeline is running.');
   });

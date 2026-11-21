@@ -814,3 +814,66 @@
   background: color-mix(in srgb, var(--line) 50%, transparent);
   border-radius: 4px;
 }
+
+/* The live view fills its room: status at the top, the pipeline as large as possible,
+   the messages at the bottom just above the bottom line. */
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.live:not(.presentation) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.live:not(.presentation) .lanes {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.live:not(.presentation) .lane {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.live:not(.presentation) .lane > .container-rows,
+.live:not(.presentation) .lane > .row {
+  flex: 1;
+  display: grid;
+  align-content: center;
+}
+.live:not(.presentation) .lane .stop {
+  font-size: 0.86em;
+}
+.messages {
+  flex: 0 0 auto;
+}
+.foot {
+  flex: 0 0 auto;
+}
+.scroll-btn {
+  font-size: 0.75em;
+  line-height: 1;
+  margin-left: 0.3em;
+  padding: 0.1em 0.4em;
+  border: 1px solid var(--line);
+  border-radius: 0.3em;
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+}
+.scroll-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.scroll-btn.more {
+  border-color: var(--amber);
+  color: var(--text);
+}
