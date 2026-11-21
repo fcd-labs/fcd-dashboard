@@ -193,9 +193,6 @@
         @if (refused(); as rf) {
           <p class="msg" data-kind="error" role="alert">✖ {{ rf }}</p>
         }
-        @if (busy(); as c) {
-          <p class="msg" data-kind="info">⏳ {{ commandText(c) }}</p>
-        }
         @for (r of runs(); track r.product + '/' + r.subProduct) {
           @if (r.waitingFor; as w) {
             <p class="msg" data-kind="waiting">
@@ -249,6 +246,9 @@
               }
             </p>
           }
+        }
+        @if (busy(); as c) {
+          <p class="msg" data-kind="info">⏳ {{ commandText(c) }}</p>
         }
         @if (!busy() && lastCommand(); as c) {
           <p class="msg" data-kind="info" [attr.data-status]="c.status">{{ commandText(c) }}</p>

@@ -692,3 +692,19 @@
 .messages h4 .conn {
   font-weight: normal;
 }
+
+.messages button {
+  font: inherit;
+  margin-left: 0.8em;
+  padding: 0.2em 0.8em;
+  border-radius: 0.4em;
+  border: 1px solid var(--green);
+  background: var(--green);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.messages button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
