@@ -439,7 +439,7 @@ components:
       properties:
         showcase: { type: string }
         experiment: { type: string }
-        serverTime: { type: string, format: date-time, description: For the running time in the browser }
+        serverTime: { type: string, format: date-time, description: 'For the running time in the browser' }
         settings: { $ref: '#/components/schemas/LiveSettings' }
         runs: { type: array, items: { $ref: '#/components/schemas/LiveRun' } }
     LiveSettings:
@@ -447,9 +447,9 @@ components:
       description: From the configuration of the showcase (kind Dashboard, spec.live); defaults without configuration.
       required: [configured, subProducts, environments, layout, keepFinishedSeconds, presentation]
       properties:
-        configured: { type: boolean, description: The configuration of the showcase was read }
-        subProducts: { type: array, items: { type: string }, description: Which sub-products, in this order; empty is all }
-        environments: { type: array, items: { type: string }, description: Which runs (werkplek, lokaal); empty is all }
+        configured: { type: boolean, description: 'The configuration of the showcase was read' }
+        subProducts: { type: array, items: { type: string }, description: 'Which sub-products, in this order; empty is all' }
+        environments: { type: array, items: { type: string }, description: 'Which runs (werkplek, lokaal); empty is all' }
         layout: { type: string, enum: [stacked, side-by-side] }
         keepFinishedSeconds: { type: integer, minimum: 0 }
         presentation:
