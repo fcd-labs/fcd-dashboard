@@ -19,6 +19,7 @@ const commandText: Record<CommandKind, string> = {
   'start-run': 'Pipeline starten',
   'approve-release': 'Release goedkeuren',
   'demo-reset': 'Demo opnieuw',
+  'demo-merge': 'Patch mergen',
 };
 
 const commandStatusText: Record<Command['status'], string> = {
@@ -135,6 +136,12 @@ export class Live implements OnInit {
       },
       error: () => (this.keyResultBusy = false),
     });
+  }
+
+  protected containerList(
+    map: Record<string, string> | undefined,
+  ): { name: string; version: string }[] {
+    return Object.entries(map ?? {}).map(([name, version]) => ({ name, version }));
   }
 
   /** Red when the last order did not arrive everywhere (the key result now, not the history). */

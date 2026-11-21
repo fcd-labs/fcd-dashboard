@@ -59,6 +59,8 @@ data class Logline(
                 "dev.cdeventsx.fcd-qualitygate.started.0.1.0" to "qualitygate.started",
                 "dev.cdeventsx.fcd-qualitygate.evaluated.0.1.0" to "qualitygate.evaluated",
                 "dev.cdeventsx.fcd-keyresult.measured.0.1.0" to "keyresult.measured",
+                "dev.cdeventsx.fcd-demo.reset.0.1.0" to "demo.reset",
+                "dev.cdeventsx.fcd-demo.merged.0.1.0" to "demo.merged",
             )
     }
 }

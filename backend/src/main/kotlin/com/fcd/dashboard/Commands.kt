@@ -32,7 +32,8 @@ object CommandKinds {
     const val START_RUN = "start-run"
     const val APPROVE_RELEASE = "approve-release"
     const val DEMO_RESET = "demo-reset"
-    val ALL = setOf(START_RUN, APPROVE_RELEASE, DEMO_RESET)
+    const val DEMO_MERGE = "demo-merge"
+    val ALL = setOf(START_RUN, APPROVE_RELEASE, DEMO_RESET, DEMO_MERGE)
     val OUTCOMES = setOf("done", "failed", "rejected")
 }
 

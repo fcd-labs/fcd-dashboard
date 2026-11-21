@@ -541,6 +541,26 @@ components:
         runs: { type: array, items: { $ref: '#/components/schemas/LiveRun' } }
         controls: { $ref: '#/components/schemas/Controls' }
         commands: { type: array, items: { $ref: '#/components/schemas/Command' }, description: 'Pending and recent commands, newest first' }
+        demo:
+          type: object
+          description: 'Demo mode: where the demo is (from the log lines fcd-demo.reset and fcd-demo.merged of this experiment)'
+          required: [phase, unmerged]
+          properties:
+            phase: { type: string, enum: [start, merged], description: 'start - after the reset, a prepared change waits to be merged; merged - nothing waits' }
+            unmerged: { type: array, items: { type: string }, description: 'The prepared changes not merged yet (repository branch)' }
+        running:
+          type: array
+          description: Per sub-product the version deployed last in this experiment (what runs now), with its containers
+          items:
+            type: object
+            required: [subProduct, title, version]
+            properties:
+              product: { type: string }
+              subProduct: { type: string }
+              title: { type: string }
+              version: { type: string }
+              containers: { type: object, additionalProperties: { type: string } }
+              deployedAt: { type: string, format: date-time }
     Controls:
       type: object
       description: Which buttons the Dashboard shows (configuration of the showcase).
@@ -553,7 +573,7 @@ components:
       type: object
       required: [kind]
       properties:
-        kind: { type: string, enum: [start-run, approve-release, demo-reset] }
+        kind: { type: string, enum: [start-run, approve-release, demo-reset, demo-merge] }
         run: { type: string, maxLength: 200, description: 'approve-release: the run that waits at the human gate' }
         save: { type: boolean, description: 'demo-reset: keep the run and the status report first' }
     Command:
@@ -561,7 +581,7 @@ components:
       required: [id, kind, requestedBy, requestedAt, status]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [start-run, approve-release, demo-reset] }
+        kind: { type: string, enum: [start-run, approve-release, demo-reset, demo-merge] }
         run: { type: string }
         save: { type: boolean }
         requestedBy: { type: string }

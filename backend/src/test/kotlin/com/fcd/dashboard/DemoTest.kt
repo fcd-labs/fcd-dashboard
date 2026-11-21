@@ -215,6 +215,30 @@ class DemoTest {
     }
 
     @Test
+    fun `after the reset the patch waits to be merged, after the merge nothing waits, and the version that runs`() {
+        val reset =
+            line(
+                "dev.cdeventsx.fcd-demo.reset.0.1.0",
+                """{"startTag":"demo-start","saved":false,"branches":[{"repository":"shop","branch":"patch/1.0.1"}]}""",
+                runId = "",
+            )
+        val deployed = line("dev.cdevents.service.deployed.0.2.0", """{"environment":{"id":"lokaal"},"artifactId":"x"}""", runId = "")
+        val merged = line("dev.cdeventsx.fcd-demo.merged.0.1.0", """{"repository":"shop","branch":"patch/1.0.1"}""", runId = "")
+        val views = Views(InMemoryEventStore(), "sim", "demo")
+
+        val atStart = LiveViews(store(reset, deployed), views, config).state("sim")
+        assertEquals(DemoState("start", listOf("shop patch/1.0.1")), atStart.demo)
+        assertNull(LiveViews(store(reset, deployed), views, config).refusal(CommandRequest(CommandKinds.DEMO_MERGE)))
+        val r = atStart.running.single()
+        assertEquals("Bestellen" to "1.0.1", r.title to r.version)
+        assertEquals("1.0.0", r.containers["orders-frontend"])
+
+        val after = LiveViews(store(reset, deployed, merged), views, config)
+        assertEquals(DemoState("merged", emptyList()), after.state("sim").demo)
+        assertEquals("Nothing waits to be merged.", after.refusal(CommandRequest(CommandKinds.DEMO_MERGE)))
+    }
+
+    @Test
     fun `commands - only when they make sense, claimed once, by the agent`() {
         val commands = InMemoryCommandStore()
         val live = LiveViews(store(*waitingRun()), Views(InMemoryEventStore(), "sim", "demo"), config, commands)

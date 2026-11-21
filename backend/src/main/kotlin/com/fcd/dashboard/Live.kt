@@ -95,6 +95,22 @@ data class Changelog(
     val text: String,
 )
 
+/** Where the demo is: after the reset a prepared change waits to be merged (start), or nothing waits (merged). */
+data class DemoState(
+    val phase: String,
+    val unmerged: List<String>,
+)
+
+/** What runs now: the version of a sub-product deployed last in this experiment. */
+data class RunningVersion(
+    val product: String,
+    val subProduct: String,
+    val title: String,
+    val version: String,
+    val containers: Map<String, String>,
+    val deployedAt: Instant,
+)
+
 data class LiveState(
     val showcase: String,
     val experiment: String,
@@ -103,6 +119,8 @@ data class LiveState(
     val runs: List<LiveRun>,
     val controls: Controls = Controls(),
     val commands: List<Command> = emptyList(),
+    val demo: DemoState? = null,
+    val running: List<RunningVersion> = emptyList(),
 )
 
 /** Tells the open live streams that a new log line arrived (one backend per showcase: in memory is enough). */
@@ -155,6 +173,16 @@ class LiveViews(
                         it.kind == CommandKinds.APPROVE_RELEASE && it.run == request.run
                     } -> "Already approved; the Pipeline is on it."
 
+                    else -> null
+                }
+            }
+
+            CommandKinds.DEMO_MERGE -> {
+                when {
+                    !controls.demoReset -> "Demo mode is off (Pipeline.spec.demo)."
+                    open.isNotEmpty() -> "The Pipeline is already busy with a command."
+                    running.isNotEmpty() -> "A pipeline is running."
+                    state(null).demo?.phase != "start" -> "Nothing waits to be merged."
                     else -> null
                 }
             }
@@ -237,7 +265,52 @@ class LiveViews(
                 val since = if (it.kind == CommandKinds.DEMO_RESET) start?.minusSeconds(COMMAND_SLACK_SECONDS) else start
                 it.status == "pending" || it.status == "claimed" || since == null || !it.requestedAt.isBefore(since)
             }
-        return LiveState(views.showcase, experiment, Instant.now(), settings, runs, config.controls, recent)
+        val all = store.all(experiment)
+        return LiveState(
+            views.showcase,
+            experiment,
+            Instant.now(),
+            settings,
+            runs,
+            config.controls,
+            recent,
+            demo(all),
+            all
+                .filter { it.shortType == "service.deployed" }
+                .groupBy { it.product to it.subProduct }
+                .map { (_, l) ->
+                    val last = l.last()
+                    RunningVersion(
+                        last.product,
+                        last.subProduct,
+                        config.subProductTitle(last.subProduct),
+                        last.custom
+                            .path("subProduct")
+                            .path("version")
+                            .asText(),
+                        last.containers(),
+                        last.timestamp,
+                    )
+                }.sortedBy { it.subProduct },
+        )
+    }
+
+    /** From the log lines of the demo: the prepared changes of the last reset, minus those merged after it. */
+    private fun demo(lines: List<Logline>): DemoState? {
+        if (!config.controls.demoReset) return null
+        val resetAt = lines.indexOfLast { it.shortType == "demo.reset" }
+        if (resetAt < 0) return null
+
+        fun key(n: com.fasterxml.jackson.databind.JsonNode) = "${n.path("repository").asText()} ${n.path("branch").asText()}"
+        val waiting = lines[resetAt].content.path("branches").map(::key)
+        val merged =
+            lines
+                .drop(resetAt + 1)
+                .filter { it.shortType == "demo.merged" }
+                .map { key(it.content) }
+                .toSet()
+        val unmerged = waiting.filterNot { it in merged }
+        return DemoState(if (unmerged.isEmpty()) "merged" else "start", unmerged)
     }
 
     private class StepState(

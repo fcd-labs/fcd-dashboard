@@ -35,7 +35,8 @@ De afspraak tussen de squads: de Pipeline (`fcd-pipeline`) en de producten van e
 | `dev.cdeventsx.fcd-qualitygate.evaluated.0.1.0` | Einde van een quality gate (de beslissing) | `gate` (`code`, `build`, `security`, `deploy`, `human`), `afterSteps`, `outcome` (`open`, `closed`), `reason`, `explain` (id's van gebruikte afwijkingen), `explainDetails` (per afwijking: `id`, `gate`, `rule`, `reason`, `approver`, `until`) |
 | `dev.cdevents.service.deployed.0.2.0` | Na een uitrol | `environment.id`, `artifactId`; optioneel `changelog`: de changelog van het deelproduct tot en met de uitgerolde versie (Markdown, hoogstens 16 000 tekens) |
 | `dev.cdevents.artifact.published.0.2.0` | Na een release | `tag`, `releaseType` |
-| `dev.cdeventsx.fcd-demo.reset.0.1.0` | "Demo opnieuw": de demo staat weer op de start (eerste logregel van een nieuwe, lege log) | `startTag`, `saved` (of de vorige run en het statusrapport bewaard zijn); `run` is leeg |
+| `dev.cdeventsx.fcd-demo.reset.0.1.0` | "Demo opnieuw": de demo staat weer op de start (eerste logregel van een nieuwe, lege log) | `startTag`, `saved` (of de vorige run en het statusrapport bewaard zijn), `branches` (de klaarstaande wijzigingen: `repository`, `branch`); `run` is leeg |
+| `dev.cdeventsx.fcd-demo.merged.0.1.0` | Een klaarstaande wijziging is lokaal gemerged (knop of terminal) | `repository`, `branch`; `trigger` is wie merget; `run` is leeg |
 | `dev.cdeventsx.fcd-keyresult.measured.0.1.0` | Per bestelling (sk-demo) | `keyResult`, `orderId`, `tableNumber`, `receivers` (per stub: `arrived`, `receivedAt`), `complete` |
 
 ## Begin en einde
@@ -146,7 +147,7 @@ Een stap met `level: container` in de configuratie (statische controle, unittest
 
 ## Versies
 
-- 0.5.0: optioneel `container` bij stappen en tests (een rij per container), `changelog` bij `service.deployed`, en de nieuwe soort `fcd-demo.reset`. Uitbreiding, niet breaking. Stuur de nieuwe soort pas naar een Dashboard dat 0.5.0 kent.
+- 0.5.0: optioneel `container` bij stappen en tests (een rij per container), `changelog` bij `service.deployed`, en de nieuwe soorten `fcd-demo.reset` en `fcd-demo.merged`. Uitbreiding, niet breaking. Stuur de nieuwe soort pas naar een Dashboard dat 0.5.0 kent.
 - 0.4.0: begin en einde per stap en per gate, voor de live weergave. Nieuw: `fcd-qualitygate.started` (met `waitingFor`), `testsuiterun.started`, `fcd-testsuiterun.progressed`; optioneel `excerpt` bij `taskrun.finished` en `steps` bij `pipelinerun.started`. Uitbreiding, niet breaking.
 - 0.3.1: JSON Schema draft-07 (het dialect waarvoor Apicurio Registry compatibiliteit controleert) en een eigen versieveld `x-version`; de inhoud is gelijk gebleven.
 - 0.3.0: showcase `fcd` (de levering van FCD zelf); elke showcase een eigen Dashboard. Het contract staat nu in fcd-dashboard (de aanbieder).

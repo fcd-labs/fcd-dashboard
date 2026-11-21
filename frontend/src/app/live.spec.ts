@@ -159,6 +159,7 @@ function state(
   return {
     controls,
     commands,
+    running: [],
     showcase: 'demo',
     experiment: 'sim',
     serverTime: now.toISOString(),
@@ -254,6 +255,35 @@ describe('Live', () => {
     expect(api.sent).toEqual([]);
     el.querySelector<HTMLButtonElement>('[data-command="demo-reset-confirm"]')!.click();
     expect(api.sent).toEqual([{ kind: 'demo-reset', extra: { save: true } }]);
+  });
+
+  it('after the reset the button merges the patch; after the merge it is Demo opnieuw again', () => {
+    create();
+    const s = state([], demo);
+    s.demo = { phase: 'start', unmerged: ['sk-demo patch/1.0.1'] };
+    s.running = [
+      {
+        subProduct: 'bestellen',
+        title: 'Bestellen',
+        version: '1.0.0',
+        containers: { 'bestellen-frontend': '1.0.0', 'bestellen-backend': '1.0.0' },
+      },
+    ];
+    stream.onState(s);
+    fixture.detectChanges();
+    expect(flat(el.querySelector('.running-version')?.textContent)).toBe(
+      'Draait nu: Bestellen 1.0.0 · bestellen-frontend 1.0.0 · bestellen-backend 1.0.0',
+    );
+    expect(el.querySelector('[data-command="demo-reset"]')).toBeNull();
+    const merge = el.querySelector<HTMLButtonElement>('[data-command="demo-merge"]')!;
+    expect(flat(merge.textContent)).toBe('⇄ Patch mergen (sk-demo patch/1.0.1)');
+    merge.click();
+    expect(api.sent).toEqual([{ kind: 'demo-merge', extra: {} }]);
+
+    stream.onState({ ...s, demo: { phase: 'merged', unmerged: [] } });
+    fixture.detectChanges();
+    expect(el.querySelector('[data-command="demo-merge"]')).toBeNull();
+    expect(el.querySelector('[data-command="demo-reset"]')).not.toBeNull();
   });
 
   it('shows what the Pipeline does with a command, and a refusal', () => {

@@ -283,6 +283,15 @@ export interface LiveState {
   runs: LiveRun[];
   controls: Controls;
   commands: Command[];
+  demo?: { phase: 'start' | 'merged'; unmerged: string[] };
+  running: {
+    product?: string;
+    subProduct: string;
+    title: string;
+    version: string;
+    containers?: Record<string, string>;
+    deployedAt?: string;
+  }[];
 }
 
 export interface Controls {
@@ -291,7 +300,7 @@ export interface Controls {
   approver?: string;
 }
 
-export type CommandKind = 'start-run' | 'approve-release' | 'demo-reset';
+export type CommandKind = 'start-run' | 'approve-release' | 'demo-reset' | 'demo-merge';
 
 export interface Command {
   id: string;

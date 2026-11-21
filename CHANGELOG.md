@@ -10,6 +10,8 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 - Knoppen van de product owner (alleen als de configuratie ze aanzet): **Pipeline starten** (mensgate bij de start, `Pipeline.spec.trigger: dashboard-button`), **Release goedkeuren** bij een wachtende mensgate, en **Demo opnieuw** met bevestiging (demomodus, `Pipeline.spec.demo`), met de keuze om eerst de run en het statusrapport te bewaren. Het Dashboard bewaart de knop als commando; de Pipeline-agent haalt het op en voert het uit (`/api/v1/commands`). Het Dashboard draait zelf nooit een pipeline.
 - Live weergave: per container een eigen rij met de stappen van niveau container (tot en met bouwen); daaronder de rij van het deelproduct. Stappen uit de backlog grijs; voor de demo ingekorte stappen gemarkeerd met hun afwijking. Een gate vóór meer dan één stap (de mensgate bij de start en vóór het releasen) staat op elke plek.
 - Het key result bovenaan de live weergave: per ontvanger of de laatste bestelling aankwam, met "stub" erbij als een stub de ontvanger vervangt (configuratie: `Container.spec.stub` en `spec.receiver`).
+- Eén knop voor de demo: na "Demo opnieuw" wordt hij **Patch mergen** (zolang een klaarstaande wijziging niet gemerged is), na de merge (knop of terminal) weer **Demo opnieuw**. Afgeleid uit de logregels `fcd-demo.reset` en `fcd-demo.merged`.
+- **Draait nu**: per deelproduct de versie die het laatst is uitgerold, met de containerversies.
 - Tabblad **Changelog**: per deelproduct de changelog van de uitgerolde versie, met de containerversies (uit de logregel `service.deployed`). Als tekst, nooit als HTML.
 
 ### Gewijzigd

@@ -464,3 +464,11 @@
 .stop[data-status='explained'] .state {
   color: var(--amber);
 }
+
+.running-version {
+  margin: 0.3em 0;
+  color: var(--muted);
+}
+.running-version strong {
+  color: var(--text);
+}

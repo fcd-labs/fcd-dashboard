@@ -37,6 +37,14 @@
   }
 
   @if (state(); as s) {
+    @for (v of s.running; track v.product + '/' + v.subProduct) {
+      <p class="running-version" [attr.data-subproduct]="v.subProduct">
+        Draait nu: <strong>{{ v.title }} {{ v.version }}</strong>
+        @for (c of containerList(v.containers); track c.name) {
+          · {{ c.name }} {{ c.version }}
+        }
+      </p>
+    }
     @if (s.controls.startButton || s.controls.demoReset) {
       <div class="controls">
         @if (s.controls.startButton) {
@@ -50,7 +58,17 @@
             ▶ Pipeline starten{{ s.controls.approver ? ' (' + s.controls.approver + ')' : '' }}
           </button>
         }
-        @if (s.controls.demoReset && !presentation()) {
+        @if (s.controls.demoReset && !presentation() && s.demo?.phase === 'start') {
+          <button
+            type="button"
+            class="primary"
+            data-command="demo-merge"
+            [disabled]="running() || !!busy()"
+            (click)="send('demo-merge')"
+          >
+            ⇄ Patch mergen ({{ s.demo!.unmerged.join(', ') }})
+          </button>
+        } @else if (s.controls.demoReset && !presentation()) {
           @if (!confirmReset()) {
             <button
               type="button"
