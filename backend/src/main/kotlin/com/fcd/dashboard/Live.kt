@@ -230,15 +230,11 @@ class LiveViews(
                         { it.subProduct },
                     ),
                 )
-        // Commands of this experiment (and the reset that started it); open commands always.
-        val since =
-            store
-                .all(experiment)
-                .firstOrNull()
-                ?.timestamp
-                ?.minusSeconds(COMMAND_SLACK_SECONDS)
+        // Commands of this experiment, and the reset that started it; open commands always.
+        val start = store.all(experiment).firstOrNull()?.timestamp
         val recent =
             commands.recent(10).filter {
+                val since = if (it.kind == CommandKinds.DEMO_RESET) start?.minusSeconds(COMMAND_SLACK_SECONDS) else start
                 it.status == "pending" || it.status == "claimed" || since == null || !it.requestedAt.isBefore(since)
             }
         return LiveState(views.showcase, experiment, Instant.now(), settings, runs, config.controls, recent)
