@@ -229,6 +229,8 @@ class LiveViews(
                     val type = c.path("testType").asText()
                     val s = testStep(type) ?: continue
                     val before = s.tests
+                    // The final count wins: a finished line carries the begin time, so it can come before the progress.
+                    if (before?.finished == true && line.shortType != "testsuiterun.finished") continue
                     s.tests =
                         LiveTests(
                             testType = type,

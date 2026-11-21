@@ -211,7 +211,7 @@ describe('Live', () => {
     const lane = el.querySelector('.lane')!;
     expect(lane.getAttribute('data-outcome')).toBe('failure');
     expect(flat(lane.querySelector('.failure')?.textContent)).toContain(
-      'Unittests – 1 van 31 mislukt – 1 van 31 tests mislukt',
+      'Unittests – 1 van 31 tests mislukt',
     );
     expect(lane.querySelector('.excerpt')?.textContent).toContain('expected status 400');
     expect(flat(lane.querySelector('.closed')?.textContent)).toBe(

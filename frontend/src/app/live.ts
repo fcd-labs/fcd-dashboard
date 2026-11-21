@@ -33,6 +33,15 @@ const marker: Record<string, string> = {
   closed: '✖',
 };
 
+const gateMarker: Record<string, string> = {
+  pending: '',
+  deciding: '…',
+  waiting: '⏸',
+  open: '✔',
+  closed: '✖',
+  'not-run': '–',
+};
+
 /** Live: per sub-product the current run, step by step and gate by gate, pushed by the Dashboard (no refresh). */
 @Component({
   selector: 'app-live',
@@ -88,7 +97,7 @@ export class Live implements OnInit {
   }
 
   protected marker(item: LiveItem): string {
-    return marker[item.status] ?? '○';
+    return (item.kind === 'gate' ? gateMarker : marker)[item.status] ?? '○';
   }
 
   protected statusText(item: LiveItem): string {

@@ -82,6 +82,7 @@
 }
 
 .lane {
+  min-width: 0;
   border: 1px solid var(--line);
   border-left: 0.35em solid var(--muted);
   border-radius: 8px;
@@ -178,6 +179,11 @@
   transform: rotate(45deg);
 }
 
+.stop[data-kind='gate'] .mark > span {
+  display: inline-block;
+  transform: rotate(-45deg);
+}
+
 .stop[data-kind='gate'] .mark,
 .stop[data-kind='gate'] .label {
   font-weight: 600;
@@ -229,7 +235,9 @@
 .tests {
   font-variant-numeric: tabular-nums;
   display: flex;
-  gap: 0.4em;
+  gap: 0.3em;
+  white-space: nowrap;
+  font-size: 0.9em;
 }
 
 .ok {
@@ -302,4 +310,11 @@
   .waiting {
     animation: none !important;
   }
+}
+
+/* On the large screen nothing is hidden: the line continues on the next row. */
+.presentation .line {
+  flex-wrap: wrap;
+  row-gap: 0.8em;
+  overflow-x: visible;
 }

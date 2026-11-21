@@ -52,7 +52,9 @@
                   [attr.data-name]="i.name"
                   [title]="i.reason ?? ''"
                 >
-                  <span class="mark" aria-hidden="true">{{ marker(i) }}</span>
+                  <span class="mark" aria-hidden="true"
+                    ><span>{{ marker(i) }}</span></span
+                  >
                   <span class="label">{{ i.title }}</span>
                   <span class="state"
                     >{{ statusText(i) }}
@@ -91,11 +93,10 @@
             <div class="failure">
               <p>
                 ✖ <strong>{{ f.title }}</strong>
-                @if (f.failures) {
-                  – {{ f.failures }} mislukt
-                }
                 @if (f.reason) {
                   – {{ f.reason }}
+                } @else if (f.failures) {
+                  – {{ f.failures }} mislukt
                 }
               </p>
               @if (f.excerpt) {
