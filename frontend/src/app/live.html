@@ -1,0 +1,130 @@
+<section
+  class="live"
+  [class.presentation]="presentation()"
+  [attr.data-theme]="presentation() ? state()?.settings?.presentation?.theme : null"
+  [style.--scale]="presentation() ? (state()?.settings?.presentation?.fontScale ?? 1.5) : 1"
+  aria-live="polite"
+>
+  <header class="head">
+    <h2>{{ title() }}</h2>
+    <span class="conn" [class.on]="connected()">
+      {{ connected() ? 'live' : 'verbinden…' }}
+      @if (state(); as s) {
+        · experiment {{ s.experiment }}
+      }
+    </span>
+  </header>
+
+  @if (state(); as s) {
+    @if (runs().length === 0) {
+      <p class="none">
+        Nog geen runs in experiment {{ s.experiment }}. Start een pipeline met <code>fcd ci</code>,
+        of de simulator.
+      </p>
+    }
+    <div class="lanes" [attr.data-layout]="s.settings.layout">
+      @for (r of runs(); track r.product + '/' + r.subProduct) {
+        <article
+          class="lane"
+          [attr.data-outcome]="r.outcome"
+          [attr.data-subproduct]="r.subProduct"
+          [class.small]="!recent(r)"
+        >
+          <h3>
+            <span class="name">{{ r.title }} {{ r.version }}</span>
+            <span class="meta"
+              >{{ r.product }} · {{ r.environment }} · {{ trigger(r.triggerKind) }}:
+              {{ r.triggerName }}
+              @if (r.releaseType === 'emergency') {
+                · <strong class="spoed">noodpatch</strong>
+              }
+            </span>
+            <span class="time">{{ runTime(r) }}</span>
+          </h3>
+
+          @if (recent(r)) {
+            <ol class="line">
+              @for (i of r.items; track i.kind + i.name) {
+                <li
+                  class="stop"
+                  [attr.data-kind]="i.kind"
+                  [attr.data-status]="i.status"
+                  [attr.data-name]="i.name"
+                  [title]="i.reason ?? ''"
+                >
+                  <span class="mark" aria-hidden="true">{{ marker(i) }}</span>
+                  <span class="label">{{ i.title }}</span>
+                  <span class="state"
+                    >{{ statusText(i) }}
+                    @if (i.status === 'running') {
+                      {{ elapsed(i.startedAt) }}
+                    } @else if (i.seconds && i.kind === 'step') {
+                      {{ clock(i.seconds) }}
+                    }
+                  </span>
+                  @if (i.tests; as t) {
+                    <span class="tests">
+                      <span class="ok">✔ {{ t.passed }}</span>
+                      <span class="ko" [class.zero]="t.failed === 0">✖ {{ t.failed }}</span>
+                      @if (!t.finished && t.expected) {
+                        <span class="of">/ {{ t.expected }}</span>
+                      }
+                    </span>
+                  }
+                  @if (i.explains.length) {
+                    <span class="explain">{{ i.explains.join(', ') }}</span>
+                  }
+                </li>
+              }
+            </ol>
+          }
+
+          @if (r.waitingFor; as w) {
+            <p class="waiting">
+              ⏸ Wacht op {{ w.name }}
+              @if (w.action) {
+                – {{ w.action }}
+              }
+            </p>
+          }
+          @if (r.failure; as f) {
+            <div class="failure">
+              <p>
+                ✖ <strong>{{ f.title }}</strong>
+                @if (f.failures) {
+                  – {{ f.failures }} mislukt
+                }
+                @if (f.reason) {
+                  – {{ f.reason }}
+                }
+              </p>
+              @if (f.excerpt) {
+                <code class="excerpt">{{ f.excerpt }}</code>
+              }
+            </div>
+          }
+          @if (gateClosed(r); as g) {
+            <p class="closed">{{ g.title }} dicht: {{ g.reason }}</p>
+          }
+          @if (r.outcome !== 'running') {
+            <p class="outcome">
+              {{ r.outcome === 'success' ? '✔ Gelukt' : '✖ Mislukt' }} in {{ clock(r.seconds) }} –
+              {{ r.title }} {{ r.version }}
+              @if (r.deployed) {
+                · uitgerold
+              }
+              @if (r.tag) {
+                · gereleased ({{ r.tag }})
+              }
+              @if (!presentation()) {
+                · <a [href]="runLink(r)">Bekijk de run →</a>
+              }
+            </p>
+          }
+        </article>
+      }
+    </div>
+  } @else {
+    <p class="none">De live weergave wordt geladen…</p>
+  }
+</section>

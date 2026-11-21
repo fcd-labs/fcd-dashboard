@@ -41,6 +41,11 @@ services:
       DB_PASSWORD: ${DASHBOARD_DB_PASSWORD:?run via fcd (generated secret)}
       DEFAULT_EXPERIMENT: ${DEFAULT_EXPERIMENT:-mvp0}
       SHOWCASE: ${FCD_SHOWCASE:?run via fcd (showcase)}
+      FCD_CONFIG_DIR: /config
+    volumes:
+      # The configuration of the showcase (fcd-<showcase>/fcd), read only: the steps, gates and their order, and what
+      # the live view shows. Without it (an empty directory) the live view takes the order from the log lines.
+      - ${FCD_CONFIG_DIR:-./ci/no-config}:/config:ro
     depends_on:
       - dashboard-store
 

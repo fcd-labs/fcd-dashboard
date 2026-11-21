@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Dashboard API
-  version: 0.3.0
+  version: 0.4.0
   license:
     name: MIT
     identifier: MIT
@@ -10,6 +10,7 @@ info:
     Everything is computed from the log lines (contracts/logline.openapi.yaml) of one experiment.
     Without the parameter experiment: the experiment of the most recent log line.
     Every showcase has its own Dashboard; the overview says which showcase.
+    The live view (/api/v1/live) pushes the state of the running pipelines with Server-Sent Events.
 servers:
   - url: /
     description: The backend, reached through the frontend
@@ -134,6 +135,39 @@ paths:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/LoglineRow' } }
         '400': { $ref: '#/components/responses/Problem' }
+  /api/v1/live/state:
+    get:
+      tags: [dashboard]
+      operationId: getLiveState
+      summary: The live view now - per sub-product the current run, with its steps and gates in the order of the configuration
+      parameters:
+        - $ref: '#/components/parameters/experiment'
+      responses:
+        '200':
+          description: The live state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LiveState' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /api/v1/live:
+    get:
+      tags: [dashboard]
+      operationId: getLiveStream
+      summary: The live view as a stream (Server-Sent Events)
+      description: |
+        Only with "Accept: text/event-stream" (EventSource in the browser). First the state now, then the new state
+        after every log line ("event: live-state", data is a LiveState as JSON), and every 15 s a heartbeat (a comment).
+        The server ends the stream after 30 minutes; EventSource connects again by itself.
+      parameters:
+        - $ref: '#/components/parameters/experiment'
+      responses:
+        '200':
+          description: The stream.
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/Problem' }
+        '406': { $ref: '#/components/responses/Problem' }
 components:
   parameters:
     experiment:
@@ -399,3 +433,98 @@ components:
               tableNumber: { type: integer }
               at: { type: string, format: date-time }
               missing: { type: array, items: { type: string } }
+    LiveState:
+      type: object
+      required: [showcase, experiment, serverTime, settings, runs]
+      properties:
+        showcase: { type: string }
+        experiment: { type: string }
+        serverTime: { type: string, format: date-time, description: For the running time in the browser }
+        settings: { $ref: '#/components/schemas/LiveSettings' }
+        runs: { type: array, items: { $ref: '#/components/schemas/LiveRun' } }
+    LiveSettings:
+      type: object
+      description: From the configuration of the showcase (kind Dashboard, spec.live); defaults without configuration.
+      required: [configured, subProducts, environments, layout, keepFinishedSeconds, presentation]
+      properties:
+        configured: { type: boolean, description: The configuration of the showcase was read }
+        subProducts: { type: array, items: { type: string }, description: Which sub-products, in this order; empty is all }
+        environments: { type: array, items: { type: string }, description: Which runs (werkplek, lokaal); empty is all }
+        layout: { type: string, enum: [stacked, side-by-side] }
+        keepFinishedSeconds: { type: integer, minimum: 0 }
+        presentation:
+          type: object
+          required: [theme, fontScale, focusRunning]
+          properties:
+            title: { type: string }
+            theme: { type: string, enum: [dark, light] }
+            fontScale: { type: number }
+            focusRunning: { type: boolean }
+    LiveRun:
+      type: object
+      required: [product, subProduct, title, run, version, environment, triggerKind, triggerName, releaseType, commit, started, outcome, deployed, items]
+      properties:
+        product: { type: string }
+        subProduct: { type: string }
+        title: { type: string }
+        run: { type: string }
+        version: { type: string }
+        environment: { type: string }
+        triggerKind: { type: string }
+        triggerName: { type: string }
+        releaseType: { type: string }
+        commit: { type: string }
+        started: { type: string, format: date-time }
+        finished: { type: string, format: date-time }
+        outcome: { type: string, enum: [running, success, failure] }
+        seconds: { type: number }
+        stuckAt: { type: string }
+        waitingFor: { $ref: '#/components/schemas/WaitingFor' }
+        failure:
+          type: object
+          required: [title]
+          properties:
+            title: { type: string }
+            reason: { type: string }
+            excerpt: { type: string }
+            failures: { type: string }
+        tag: { type: string }
+        deployed: { type: boolean }
+        items: { type: array, items: { $ref: '#/components/schemas/LiveItem' } }
+    LiveItem:
+      type: object
+      description: A CI step or a quality gate on the line, in the order of the configuration.
+      required: [kind, name, title, status, explains]
+      properties:
+        kind: { type: string, enum: [step, gate] }
+        name: { type: string }
+        title: { type: string }
+        status:
+          type: string
+          description: Step - waiting, running, succeeded, failed, skipped, not-run. Gate - pending, deciding, waiting (for a human), open, closed, not-run.
+          enum: [waiting, running, succeeded, failed, skipped, not-run, pending, deciding, open, closed]
+        step: { type: integer }
+        startedAt: { type: string, format: date-time }
+        seconds: { type: number }
+        reason: { type: string }
+        excerpt: { type: string }
+        explains: { type: array, items: { type: string } }
+        waitingFor: { $ref: '#/components/schemas/WaitingFor' }
+        tests:
+          type: object
+          required: [testType, tests, passed, failed, skipped, finished]
+          properties:
+            testType: { type: string }
+            tests: { type: integer }
+            passed: { type: integer }
+            failed: { type: integer }
+            skipped: { type: integer }
+            expected: { type: integer }
+            finished: { type: boolean }
+    WaitingFor:
+      type: object
+      required: [kind, name]
+      properties:
+        kind: { type: string }
+        name: { type: string }
+        action: { type: string }

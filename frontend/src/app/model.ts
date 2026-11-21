@@ -172,3 +172,92 @@ export interface KeyResultView {
   percent?: number;
   incomplete: { orderId: string; tableNumber: number; at: string; missing: string[] }[];
 }
+
+// The live view (GET /api/v1/live/state, and as Server-Sent Events on GET /api/v1/live).
+export interface WaitingFor {
+  kind: string;
+  name: string;
+  action?: string;
+}
+
+export interface LiveTests {
+  testType: string;
+  tests: number;
+  passed: number;
+  failed: number;
+  skipped: number;
+  expected?: number;
+  finished: boolean;
+}
+
+export type LiveStatus =
+  | 'waiting'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'skipped'
+  | 'not-run'
+  | 'pending'
+  | 'deciding'
+  | 'open'
+  | 'closed';
+
+export interface LiveItem {
+  kind: 'step' | 'gate';
+  name: string;
+  title: string;
+  status: LiveStatus;
+  step?: number;
+  startedAt?: string;
+  seconds?: number;
+  reason?: string;
+  excerpt?: string;
+  explains: string[];
+  waitingFor?: WaitingFor;
+  tests?: LiveTests;
+}
+
+export interface LiveRun {
+  product: string;
+  subProduct: string;
+  title: string;
+  run: string;
+  version: string;
+  environment: string;
+  triggerKind: string;
+  triggerName: string;
+  releaseType: string;
+  commit: string;
+  started: string;
+  finished?: string;
+  outcome: 'running' | 'success' | 'failure';
+  seconds?: number;
+  stuckAt?: string;
+  waitingFor?: WaitingFor;
+  failure?: { title: string; reason?: string; excerpt?: string; failures?: string };
+  tag?: string;
+  deployed: boolean;
+  items: LiveItem[];
+}
+
+export interface LiveSettings {
+  configured: boolean;
+  subProducts: string[];
+  environments: string[];
+  layout: 'stacked' | 'side-by-side';
+  keepFinishedSeconds: number;
+  presentation: {
+    title?: string;
+    theme: 'dark' | 'light';
+    fontScale: number;
+    focusRunning: boolean;
+  };
+}
+
+export interface LiveState {
+  showcase: string;
+  experiment: string;
+  serverTime: string;
+  settings: LiveSettings;
+  runs: LiveRun[];
+}

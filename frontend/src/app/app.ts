@@ -2,6 +2,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { DashboardApi } from './dashboard-api';
+import { Live } from './live';
 import {
   KeyResultView,
   KpiView,
@@ -12,7 +13,7 @@ import {
   TestView,
 } from './model';
 
-export type Tab = 'status' | 'kpis' | 'keyresult' | 'tests' | 'loglines' | 'report';
+export type Tab = 'live' | 'status' | 'kpis' | 'keyresult' | 'tests' | 'loglines' | 'report';
 
 const REFRESH_MS = 5000;
 
@@ -32,6 +33,7 @@ export const statusText: Record<string, string> = {
   fail: 'mislukt',
   complete: 'volledig',
   incomplete: 'niet volledig',
+  waiting: 'wacht',
 };
 
 export const gateText: Record<string, string> = {
@@ -58,18 +60,23 @@ export const triggerText: Record<string, string> = {
 
 @Component({
   selector: 'app-root',
-  imports: [DatePipe, DecimalPipe],
+  imports: [DatePipe, DecimalPipe, Live],
+  host: { '(document:keydown)': 'onKey($event)' },
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
 export class App {
   private readonly api = inject(DashboardApi);
 
-  protected readonly tab = signal<Tab>('status');
-  /** From the address (?experiment=...), else the Dashboard chooses the current experiment. */
-  protected readonly experiment = signal<string | null>(
-    new URLSearchParams(globalThis.location?.search ?? '').get('experiment'),
+  private readonly params = new URLSearchParams(globalThis.location?.search ?? '');
+  /** From the address: ?tab=live, or ?subproduct=... (a link from the live view) opens that sub-product. */
+  protected readonly tab = signal<Tab>(
+    this.params.get('tab') === 'live' || this.params.has('presentatie') ? 'live' : 'status',
   );
+  /** From the address (?experiment=...), else the Dashboard chooses the current experiment. */
+  protected readonly experiment = signal<string | null>(this.params.get('experiment'));
+  /** Presentation mode for a large screen (?presentatie, or the key P on the live view). */
+  protected readonly presentation = signal(this.params.has('presentatie'));
   protected readonly overview = signal<Overview | null>(null);
   protected readonly tests = signal<TestView[]>([]);
   protected readonly loglines = signal<LoglineRow[]>([]);
@@ -78,7 +85,7 @@ export class App {
   protected readonly report = signal<string>('');
   protected readonly error = signal(false);
   /** Selected sub-product: "product/name". */
-  protected readonly selected = signal<string | null>(null);
+  protected readonly selected = signal<string | null>(this.params.get('subproduct'));
 
   protected readonly statusText = statusText;
   protected readonly gateText = gateText;
@@ -102,7 +109,18 @@ export class App {
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
+  /** P: presentation mode on or off (on the live view); Escape: off. */
+  protected onKey(e: KeyboardEvent): void {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest?.('input, select, textarea') || e.ctrlKey || e.metaKey || e.altKey) return;
+    if ((e.key === 'p' || e.key === 'P') && this.tab() === 'live')
+      this.presentation.update((v) => !v);
+    if (e.key === 'Escape') this.presentation.set(false);
+  }
+
   refresh(): void {
+    // The live view gets its data pushed; the other tabs are not visible in presentation mode.
+    if (this.presentation()) return;
     const e = this.experiment();
     forkJoin({
       overview: this.api.overview(e),
