@@ -13,18 +13,12 @@
   }
 
   @if (state(); as s) {
-    @if (s.running.length === 0) {
-      <div class="status placeholder">
-        <p class="status-line"><strong class="product">&nbsp;</strong> nog niets uitgerold</p>
-        <div class="keyresult-bar waiting" data-state="waiting">
-          <span class="kr-label">Key result</span>
-          <span class="kr-count">nog geen bestelling van een gast</span>
-        </div>
-      </div>
-    }
-    @for (v of s.running; track v.product + '/' + v.subProduct) {
-      <div class="status" [attr.data-subproduct]="v.subProduct">
-        <p class="status-line">
+    <div class="statusbar">
+      @if (s.running.length === 0) {
+        <p class="status-line placeholder">nog niets uitgerold</p>
+      }
+      @for (v of s.running; track v.product + '/' + v.subProduct) {
+        <p class="status-line" [attr.data-subproduct]="v.subProduct">
           <strong class="product">{{ v.productTitle || v.product }}</strong>
           <span class="running-version"
             >draait nu: <strong>{{ v.title }} {{ v.version }}</strong> ({{ parts(v) }})</span
@@ -38,84 +32,68 @@
             </span>
           }
         </p>
-        <div
-          class="keyresult-bar"
-          [class.bad]="krState(v) === 'bad'"
-          [class.waiting]="krState(v) === 'waiting'"
-          [attr.data-state]="krState(v)"
-        >
-          <span class="kr-label">Key result ({{ v.title }} {{ v.version }})</span>
-          @for (st of v.stubs ?? []; track st.name) {
-            <span
-              class="receiver"
-              [attr.data-arrived]="arrived(st.receiver, v)"
-              [attr.data-receiver]="st.receiver"
-              >{{ arrivedMark(arrived(st.receiver, v)) }} {{ st.title }}
-              <small class="stub">stub</small></span
-            >
-          }
-          <span class="kr-count">{{ krText(v) }}</span>
-        </div>
-      </div>
-    }
-    @if (s.controls.startButton || s.controls.demoReset) {
-      <div class="controls">
-        @if (s.controls.startButton) {
-          <button
-            type="button"
-            class="primary"
-            data-command="start-run"
-            [disabled]="running() || !!busy()"
-            (click)="send('start-run')"
-          >
-            ▶ Pipeline starten{{ s.controls.approver ? ' (' + s.controls.approver + ')' : '' }}
-          </button>
-        }
-        @if (s.controls.demoReset && !presentation() && s.demo?.phase === 'start') {
-          <button
-            type="button"
-            class="primary"
-            data-command="demo-merge"
-            [disabled]="running() || !!busy()"
-            (click)="send('demo-merge')"
-          >
-            ⇄ Patch mergen ({{ s.demo!.unmerged.join(', ') }})
-          </button>
-        } @else if (s.controls.demoReset && !presentation()) {
-          @if (!confirmReset()) {
+      }
+      @if (s.controls.startButton || s.controls.demoReset) {
+        <div class="controls">
+          @if (s.controls.startButton) {
             <button
               type="button"
-              data-command="demo-reset"
+              class="primary"
+              data-command="start-run"
               [disabled]="running() || !!busy()"
-              (click)="confirmReset.set(true)"
+              (click)="send('start-run')"
             >
-              ↺ Demo opnieuw
+              ▶ Pipeline starten{{ s.controls.approver ? ' (' + s.controls.approver + ')' : '' }}
             </button>
-          } @else {
-            <span class="confirm" role="dialog" aria-label="Demo opnieuw bevestigen">
-              Terug naar de start van de demo, met een lege log?
-              <label
-                ><input
-                  type="checkbox"
-                  [checked]="saveFirst()"
-                  (change)="saveFirst.set($any($event.target).checked)"
-                />
-                eerst de run en het statusrapport bewaren</label
-              >
+          }
+          @if (s.controls.demoReset && !presentation() && s.demo?.phase === 'start') {
+            <button
+              type="button"
+              class="small"
+              data-command="demo-merge"
+              [disabled]="running() || !!busy()"
+              (click)="send('demo-merge')"
+              [title]="'Merge ' + s.demo!.unmerged.join(', ')"
+            >
+              ⇄ Patch mergen
+            </button>
+          } @else if (s.controls.demoReset && !presentation()) {
+            @if (!confirmReset()) {
               <button
                 type="button"
-                class="danger"
-                data-command="demo-reset-confirm"
-                (click)="send('demo-reset', { save: saveFirst() })"
+                class="small"
+                data-command="demo-reset"
+                [disabled]="running() || !!busy()"
+                (click)="confirmReset.set(true)"
               >
-                Ja, demo opnieuw
+                ↺ Demo opnieuw
               </button>
-              <button type="button" (click)="confirmReset.set(false)">Annuleren</button>
-            </span>
+            } @else {
+              <span class="confirm" role="dialog" aria-label="Demo opnieuw bevestigen">
+                Demo opnieuw?
+                <label
+                  ><input
+                    type="checkbox"
+                    [checked]="saveFirst()"
+                    (change)="saveFirst.set($any($event.target).checked)"
+                  />
+                  eerst bewaren</label
+                >
+                <button
+                  type="button"
+                  class="small danger"
+                  data-command="demo-reset-confirm"
+                  (click)="send('demo-reset', { save: saveFirst() })"
+                >
+                  Ja
+                </button>
+                <button type="button" class="small" (click)="confirmReset.set(false)">Nee</button>
+              </span>
+            }
           }
-        }
-      </div>
-    }
+        </div>
+      }
+    </div>
 
     <div class="lanes" [attr.data-layout]="s.settings.layout">
       @if (runs().length === 0) {

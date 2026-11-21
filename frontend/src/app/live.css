@@ -709,10 +709,38 @@
   cursor: not-allowed;
 }
 
-/* Every pane keeps its place: fixed heights, placeholders while there is nothing to show. */
-.status {
-  height: 6.6em;
+/* Every pane keeps its place. One line: what runs (left) and the buttons (right, small). */
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  height: 2.1em;
+  margin: 0.1em 0 0.3em;
   overflow: hidden;
+  white-space: nowrap;
+}
+.statusbar .status-line {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-wrap: nowrap;
+}
+.statusbar .status-line.placeholder {
+  color: var(--muted);
+}
+.statusbar .controls {
+  flex: 0 0 auto;
+  margin: 0;
+  height: auto;
+}
+.controls button {
+  padding: 0.25em 0.8em;
+}
+.controls button.small {
+  font-size: 0.8em;
+  padding: 0.15em 0.6em;
 }
 .controls {
   height: 2.3em;
@@ -769,4 +797,22 @@
 }
 .foot .keys {
   text-align: right;
+}
+
+/* The messages: a scroll bar that is always visible. */
+.messages-list {
+  overflow-y: scroll;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+.messages-list::-webkit-scrollbar {
+  width: 8px;
+}
+.messages-list::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 4px;
+}
+.messages-list::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--line) 50%, transparent);
+  border-radius: 4px;
 }

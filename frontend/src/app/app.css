@@ -397,3 +397,31 @@ tr.sum td {
   padding: 8px 24px 16px;
   line-height: 1.5;
 }
+
+.kr-stubs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1em;
+  align-items: baseline;
+  padding: 0.5em 0.8em;
+  border: 1px solid var(--green);
+  border-left: 0.35em solid var(--green);
+  border-radius: 8px;
+}
+.kr-stubs.bad {
+  border-color: var(--red);
+}
+.kr-stubs .receiver[data-arrived='true'] {
+  color: var(--green);
+}
+.kr-stubs .receiver[data-arrived='false'] {
+  color: var(--red);
+  font-weight: 700;
+}
+.kr-stubs .stub {
+  margin-left: 0.25em;
+  padding: 0 0.35em;
+  border: 1px solid currentColor;
+  border-radius: 0.3em;
+  font-size: 0.75em;
+}

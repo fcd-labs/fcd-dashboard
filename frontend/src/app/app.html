@@ -404,6 +404,22 @@
               Key result van de intent Bestellen: <strong>{{ kr.keyResult }}</strong
               >.
             </p>
+            @if (kr.receivers?.length) {
+              <p class="kr-stubs" [class.bad]="lastIncomplete(kr)">
+                Laatste bestelling{{ kr.version ? ' met Bestellen ' + kr.version : '' }}:
+                @for (r of kr.receivers; track r.name) {
+                  <span
+                    class="receiver"
+                    [attr.data-arrived]="r.lastArrived"
+                    [attr.data-receiver]="r.name"
+                    >{{ r.lastArrived ? '✔' : '✖' }} {{ r.title }}
+                    @if (r.stub) {
+                      <small class="stub">stub</small>
+                    }
+                  </span>
+                }
+              </p>
+            }
             <div class="tiles">
               <div class="tile">
                 <span class="label">Bestellingen</span><span class="value">{{ kr.orders }}</span>

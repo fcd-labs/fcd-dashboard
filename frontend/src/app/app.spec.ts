@@ -177,6 +177,11 @@ const keyResult: KeyResultView = {
   complete: 2,
   percent: 66.7,
   incomplete: [{ orderId: 'abc', tableNumber: 12, at: '2026-11-26T10:10:00Z', missing: ['bar'] }],
+  version: '1.0.0',
+  receivers: [
+    { name: 'kitchen', title: 'keuken', stub: true, lastArrived: true, arrived: 3 },
+    { name: 'bar', title: 'bar', stub: true, lastArrived: false, arrived: 2 },
+  ],
 };
 
 /** Text without whitespace: Angular drops whitespace between elements. */
@@ -298,6 +303,15 @@ describe('App (dashboard)', () => {
     expect(flat(el.querySelector('.keyresult tbody tr')?.textContent)).toContain(
       flat('abc 12 bar'),
     );
+  });
+
+  it('shows per stub whether the last order arrived, in the key result tab', () => {
+    flushAll();
+    openTab('Key result');
+    const line = el.querySelector('.kr-stubs')!;
+    expect(line.classList).toContain('bad');
+    expect(flat(line.querySelector('[data-receiver="bar"]')?.textContent)).toBe('✖barstub');
+    expect(flat(line.textContent)).toContain('LaatstebestellingmetBestellen1.0.0');
   });
 
   it('shows the status report as a readable page and offers it as a page and as Markdown', () => {

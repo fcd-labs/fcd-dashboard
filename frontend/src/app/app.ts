@@ -155,6 +155,11 @@ export class App {
     });
   }
 
+  /** The last order did not arrive at every receiver. */
+  protected lastIncomplete(kr: KeyResultView): boolean {
+    return (kr.receivers ?? []).some((r) => !r.lastArrived);
+  }
+
   /** "demo-20261121-131229" -> "demo 21-11 13:12"; other names as they are. */
   protected experimentLabel(e: string): string {
     const m = /^([a-z]+)-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})/.exec(e);

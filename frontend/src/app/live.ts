@@ -2,15 +2,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
 import { DashboardApi } from './dashboard-api';
 import { LiveStream } from './live-stream';
-import {
-  Command,
-  CommandKind,
-  KeyResultView,
-  LiveItem,
-  LiveRun,
-  LiveState,
-  RunningVersion,
-} from './model';
+import { Command, CommandKind, LiveItem, LiveRun, LiveState, RunningVersion } from './model';
 
 const stepText: Record<string, string> = {
   waiting: 'wachtend',
@@ -88,12 +80,10 @@ export class Live implements OnInit {
 
   protected readonly state = signal<LiveState | null>(null);
   protected readonly connected = signal(false);
-  protected readonly keyResult = signal<KeyResultView | null>(null);
   /** The confirmation of "Demo opnieuw" is open. */
   protected readonly confirmReset = signal(false);
   protected readonly saveFirst = signal(true);
   protected readonly refused = signal<string | null>(null);
-  private keyResultBusy = false;
   /** The time of the Dashboard, ticking every second (for the running time). */
   protected readonly now = signal(Date.now());
   private offset = 0;
@@ -123,7 +113,6 @@ export class Live implements OnInit {
         this.offset = Date.parse(s.serverTime) - Date.now();
         this.now.set(Date.now() + this.offset);
         this.state.set(s);
-        this.loadKeyResult();
       },
       (c) => this.connected.set(c),
     );
@@ -131,18 +120,6 @@ export class Live implements OnInit {
     this.destroyRef.onDestroy(() => {
       close();
       clearInterval(timer);
-    });
-  }
-
-  private loadKeyResult(): void {
-    if (this.keyResultBusy) return;
-    this.keyResultBusy = true;
-    this.api.keyResult(this.experiment()).subscribe({
-      next: (k) => {
-        this.keyResult.set(k);
-        this.keyResultBusy = false;
-      },
-      error: () => (this.keyResultBusy = false),
     });
   }
 
@@ -201,43 +178,6 @@ export class Live implements OnInit {
       .join(' · ');
   }
 
-  protected versionResult(kr: KeyResultView | null, version: string | undefined) {
-    return kr?.versions?.find((r) => r.version === version);
-  }
-
-  /** Did the last order of a guest with the version that runs arrive at this receiver? waiting: no order yet. */
-  protected arrived(receiver: string, v: RunningVersion): 'true' | 'false' | 'waiting' {
-    const kr = this.keyResult();
-    if (!kr || kr.version !== v.version || !this.versionResult(kr, v.version)) return 'waiting';
-    const r = kr.receivers?.find((x) => x.name === receiver);
-    return r ? (r.lastArrived ? 'true' : 'false') : 'waiting';
-  }
-
-  protected arrivedMark(a: string): string {
-    return a === 'true' ? '✔' : a === 'false' ? '✖' : '○';
-  }
-
-  /** The key result of the version that runs: red when the last order missed a receiver, grey without an order. */
-  protected krState(v: RunningVersion): 'ok' | 'bad' | 'waiting' {
-    const states = (v.stubs ?? []).map((s) => this.arrived(s.receiver, v));
-    if (states.includes('false')) return 'bad';
-    if (!this.versionResult(this.keyResult(), v.version)) return 'waiting';
-    return 'ok';
-  }
-
-  protected krText(v: RunningVersion): string {
-    const kr = this.keyResult();
-    const now = this.versionResult(kr, v.version);
-    if (now)
-      return `${now.complete} van ${now.orders} bestellingen met ${v.version} volledig aangekomen`;
-    const before = kr?.version ? this.versionResult(kr, kr.version) : undefined;
-    return (
-      `nog geen bestelling van een gast met ${v.version} – plaats een bestelling` +
-      (before ? ` (vorige versie ${kr!.version}: ${before.complete} van ${before.orders})` : '')
-    );
-  }
-
-  /** A command that is still with the Pipeline (pending or claimed). */
   /** Approving a release is possible while the Pipeline runs (the start command is still open then). */
   protected approvable(run: LiveRun): boolean {
     return !this.state()?.commands.some(

@@ -229,61 +229,23 @@ describe('Live', () => {
     },
   ];
 
-  it('shows ShowKitchen with what runs, the stubs with their version, and the key result per stub: red for the bar', () => {
+  it('one line: ShowKitchen with what runs and the stubs with their version, the buttons on the same line', () => {
     create();
-    api.kr = { ...api.kr, versions: [{ version: '1.0.0', orders: 1, complete: 0, percent: 0 }] };
-    const s = state([]);
+    const s = state([], demo);
     s.running = runningAt('1.0.0');
     stream.onState(s);
     fixture.detectChanges();
-    expect(flat(el.querySelector('.status-line .product')?.textContent)).toBe('ShowKitchen');
-    expect(flat(el.querySelector('.running-version')?.textContent)).toBe(
+    const bar = el.querySelector('.statusbar')!;
+    expect(flat(bar.querySelector('.product')?.textContent)).toBe('ShowKitchen');
+    expect(flat(bar.querySelector('.running-version')?.textContent)).toBe(
       'draait nu: Bestellen 1.0.0 (frontend 1.0.0 · backend 1.0.0)',
     );
     expect(
-      Array.from(el.querySelectorAll('.stub-versions span')).map((e) => flat(e.textContent)),
+      Array.from(bar.querySelectorAll('.stub-versions span')).map((e) => flat(e.textContent)),
     ).toEqual(['keuken 1.0.0', 'bar 1.0.0']);
-    const bar = el.querySelector('[data-receiver="bar"]');
-    expect(flat(bar?.textContent)).toBe('✖ bar stub');
-    expect(bar?.getAttribute('data-arrived')).toBe('false');
-    expect(el.querySelector('.keyresult-bar')?.getAttribute('data-state')).toBe('bad');
-    expect(flat(el.querySelector('.kr-label')?.textContent)).toBe('Key result (Bestellen 1.0.0)');
-  });
-
-  it('the key result follows the version that runs: grey stubs until an order with 1.0.1, then green', () => {
-    create();
-    api.kr = { ...api.kr, versions: [{ version: '1.0.0', orders: 1, complete: 0, percent: 0 }] };
-    const s = state([]);
-    s.running = runningAt('1.0.1');
-    stream.onState(s);
-    fixture.detectChanges();
-    const grey = el.querySelector('.keyresult-bar')!;
-    expect(grey.getAttribute('data-state')).toBe('waiting');
-    expect(el.querySelector('[data-receiver="bar"]')?.getAttribute('data-arrived')).toBe('waiting');
-    expect(flat(el.querySelector('[data-receiver="bar"]')?.textContent)).toBe('○ bar stub');
-    expect(flat(grey.querySelector('.kr-count')?.textContent)).toBe(
-      'nog geen bestelling van een gast met 1.0.1 – plaats een bestelling (vorige versie 1.0.0: 0 van 1)',
-    );
-
-    api.kr = {
-      ...api.kr,
-      orders: 2,
-      complete: 1,
-      version: '1.0.1',
-      versions: [
-        { version: '1.0.0', orders: 1, complete: 0, percent: 0 },
-        { version: '1.0.1', orders: 1, complete: 1, percent: 100 },
-      ],
-      receivers: api.kr.receivers!.map((r) => ({ ...r, lastArrived: true })),
-    };
-    stream.onState({ ...s });
-    fixture.detectChanges();
-    const green = el.querySelector('.keyresult-bar')!;
-    expect(green.getAttribute('data-state')).toBe('ok');
-    expect(flat(el.querySelector('[data-receiver="bar"]')?.textContent)).toBe('✔ bar stub');
-    expect(flat(green.querySelector('.kr-count')?.textContent)).toBe(
-      '1 van 1 bestellingen met 1.0.1 volledig aangekomen',
-    );
+    expect(bar.querySelector('[data-command="start-run"]')).not.toBeNull();
+    // The key result is in its own tab, not on the live view.
+    expect(el.querySelector('.keyresult-bar')).toBeNull();
   });
 
   it('the start button sends start-run; not while a pipeline runs', () => {
@@ -330,7 +292,8 @@ describe('Live', () => {
     fixture.detectChanges();
     expect(el.querySelector('[data-command="demo-reset"]')).toBeNull();
     const merge = el.querySelector<HTMLButtonElement>('[data-command="demo-merge"]')!;
-    expect(flat(merge.textContent)).toBe('⇄ Patch mergen (sk-demo patch/1.0.1)');
+    expect(flat(merge.textContent)).toBe('⇄ Patch mergen');
+    expect(merge.getAttribute('title')).toBe('Merge sk-demo patch/1.0.1');
     merge.click();
     expect(api.sent).toEqual([{ kind: 'demo-merge', extra: {} }]);
 
