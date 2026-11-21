@@ -128,7 +128,7 @@ class LiveTest {
         val unit = run.items.first { it.name == "unit-tests" }
         assertEquals("failed", unit.status)
         assertTrue(unit.excerpt!!.contains("expected status 400"))
-        assertEquals(1, unit.tests!!.failed)
+        assertEquals(LiveTests("unit", 31, 30, 1, 0, 31, true), unit.tests)
         val gate = run.items.first { it.name == "code" }
         assertEquals("closed", gate.status)
         assertTrue(gate.reason!!.isNotBlank())
@@ -196,6 +196,46 @@ class LiveTest {
         assertEquals("success", run.outcome)
         assertTrue(run.run.contains("-replay-"))
         assertEquals(10, run.items.count { it.kind == "step" })
+    }
+
+    @Test
+    fun `the final test count wins, also when it carries the begin time`() {
+        val store = InMemoryEventStore()
+        val reader = LoglineReader()
+
+        fun send(
+            type: String,
+            at: String,
+            content: String,
+        ) = store.add(
+            reader.read(
+                """{"context":{"version":"0.4.1","id":"${java.util.UUID.randomUUID()}","source":"t","type":"$type","timestamp":"$at"},
+                "subject":{"id":"x","content":$content},"customData":{"durationSeconds":0,"run":"r1","trigger":{"kind":"human","name":"t"},
+                "product":"shop","subProduct":{"name":"orders","version":"1.0.0"},"showcase":"demo","experiment":"sim","environment":"lokaal"}}""",
+            ),
+        )
+        send("dev.cdevents.taskrun.started.0.2.0", "2026-11-26T09:00:00Z", """{"taskName":"unit-tests","step":2}""")
+        send("dev.cdevents.testsuiterun.started.0.2.0", "2026-11-26T09:00:00Z", """{"testType":"unit","expected":31}""")
+        send(
+            "dev.cdeventsx.fcd-testsuiterun.progressed.0.1.0",
+            "2026-11-26T09:00:05Z",
+            """{"testType":"unit","tests":25,"passed":25,"failed":0}""",
+        )
+        // Sent last, with the time the test suite began (contract: the time the activity began).
+        send(
+            "dev.cdevents.testsuiterun.finished.0.2.0",
+            "2026-11-26T09:00:00Z",
+            """{"testType":"unit","tests":31,"passed":30,"failed":1}""",
+        )
+
+        val tests =
+            live(store)
+                .runs
+                .single()
+                .items
+                .first { it.name == "unit-tests" }
+                .tests
+        assertEquals(LiveTests("unit", 31, 30, 1, 0, 31, true), tests)
     }
 
     @Test
