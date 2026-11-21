@@ -322,7 +322,7 @@
 
 /* The big screen: the size from the configuration, but never larger than fits on one screen. */
 .presentation {
-  font-size: min(calc(1rem * var(--scale, 1)), 1.15vw, 2.1vh);
+  font-size: min(calc(1rem * var(--scale, 1)), 1.4vw, 2.5vh);
 }
 
 /* Demo: rows per container, backlog, shortened steps, buttons, key result */
