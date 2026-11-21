@@ -540,3 +540,23 @@
 .legend {
   margin: 0.3em 0 0;
 }
+/* Long words (Performancetests, Consumer-contracttest) may break, so a row stays on one line. */
+.stop {
+  min-width: 0;
+}
+.stop .label,
+.stop .state {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+.row {
+  grid-template-columns: 5.5em 1fr;
+}
+.line {
+  flex-wrap: nowrap;
+}
+@media (max-width: 900px) {
+  .line {
+    flex-wrap: wrap;
+  }
+}
