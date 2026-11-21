@@ -131,7 +131,15 @@ class ShowcaseConfig(
             val entry = LaneEntry("step", b.name, b.title)
             // After the step it follows and after the gates that close behind that step (not before the gate of the next step).
             var i = if (at < 0) out.size else at + 1
-            while (i < out.size && out[i].kind == "gate" && out[i].before == null) i++
+            // ... and after the backlog steps placed there before, so they keep the order of the configuration.
+            while (i < out.size &&
+                (
+                    (out[i].kind == "gate" && out[i].before == null) ||
+                        backlog.any { it.name == out[i].name && it.after == b.after }
+                )
+            ) {
+                i++
+            }
             out.add(i, entry)
         }
         return out

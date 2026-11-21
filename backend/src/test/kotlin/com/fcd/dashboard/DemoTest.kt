@@ -31,7 +31,7 @@ class DemoTest {
               trigger: dashboard-button
               demo: {startTag: demo-start}
               steps: [lint, unit-tests, build, e2e, release]
-              backlog: [coverage, dast]
+              backlog: [coverage, dast, perf]
             ---
             kind: Step
             metadata: {name: lint, title: Statisch}
@@ -55,6 +55,10 @@ class DemoTest {
             ---
             kind: Step
             metadata: {name: dast, title: DAST}
+            spec: {after: e2e}
+            ---
+            kind: Step
+            metadata: {name: perf, title: Perf}
             spec: {after: e2e}
             ---
             kind: Step
@@ -164,11 +168,11 @@ class DemoTest {
         assertEquals("failed", r.containerRows[1].items[0].status)
 
         assertEquals(
-            listOf("gate:human", "gate:code", "step:build", "step:e2e", "step:dast", "gate:human", "step:release"),
+            listOf("gate:human", "gate:code", "step:build", "step:e2e", "step:dast", "step:perf", "gate:human", "step:release"),
             r.items.map { "${it.kind}:${it.name}" },
         )
         assertEquals("open", r.items[0].status)
-        assertEquals("waiting", r.items[5].status)
+        assertEquals("waiting", r.items[6].status)
         assertEquals("Johannes", r.waitingFor?.name)
         assertEquals("backlog", r.items[4].status)
         assertEquals("EXP-9", r.items[3].shortened?.explain)
