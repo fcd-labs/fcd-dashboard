@@ -711,7 +711,8 @@
 
 /* Every pane keeps its place: fixed heights, placeholders while there is nothing to show. */
 .status {
-  min-height: 4.2em;
+  height: 6.6em;
+  overflow: hidden;
 }
 .controls {
   min-height: 2.2em;
@@ -723,7 +724,8 @@
   padding: 0.1em 0.5em;
 }
 .lane {
-  min-height: 15.5em;
+  height: 20.5em;
+  overflow: hidden;
 }
 .lane.placeholder {
   border-style: dashed;
