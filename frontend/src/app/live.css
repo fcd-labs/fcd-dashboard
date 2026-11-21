@@ -715,7 +715,7 @@
   overflow: hidden;
 }
 .controls {
-  min-height: 2.2em;
+  height: 2.3em;
   flex-wrap: nowrap;
   white-space: nowrap;
 }
