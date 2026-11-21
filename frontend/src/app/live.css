@@ -708,3 +708,63 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+/* Every pane keeps its place: fixed heights, placeholders while there is nothing to show. */
+.status {
+  min-height: 4.2em;
+}
+.controls {
+  min-height: 2.2em;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.controls .confirm {
+  flex-wrap: nowrap;
+  padding: 0.1em 0.5em;
+}
+.lane {
+  min-height: 15.5em;
+}
+.lane.placeholder {
+  border-style: dashed;
+  border-left-width: 1px;
+  background: transparent;
+}
+.status.placeholder .product {
+  min-width: 6em;
+}
+/* The messages: two lines high, a smaller letter, scroll for more. */
+.messages-list {
+  height: 3.2em;
+  font-size: 0.82em;
+  line-height: 1.35;
+  padding: 0.15em 0.8em;
+}
+.messages h4 {
+  padding: 0.15em 0.8em;
+}
+.messages .excerpt {
+  font-size: 0.95em;
+}
+/* The bottom line: legend left, version in the middle, keys right. */
+.foot {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  gap: 1em;
+  margin-top: 0.4em;
+  font-size: 0.75em;
+  color: var(--muted);
+}
+.foot .legend {
+  display: flex;
+  gap: 1.5em;
+  margin: 0;
+  font-size: 1em;
+}
+.foot .version {
+  text-align: center;
+}
+.foot .keys {
+  text-align: right;
+}

@@ -62,7 +62,14 @@ fun main(args: Array<String>) {
         )
     val commands = PostgresCommandStore(store.dataSource)
     embeddedServer(Netty, port = env("PORT", "8080").toInt()) {
-        dashboard(store, env("DEFAULT_EXPERIMENT", "mvp0"), env("SHOWCASE"), config, commands = commands)
+        dashboard(
+            store,
+            env("DEFAULT_EXPERIMENT", "mvp0"),
+            env("SHOWCASE"),
+            config,
+            commands = commands,
+            version = env("DASHBOARD_VERSION", "dev"),
+        )
     }.start(wait = true)
 }
 
@@ -80,11 +87,12 @@ fun Application.dashboard(
     liveStreamMillis: Long = LIVE_STREAM_MILLIS,
     liveHeartbeatMillis: Long = LIVE_HEARTBEAT_MILLIS,
     commands: CommandStore = InMemoryCommandStore(),
+    version: String = "dev",
 ) {
     val reader = LoglineReader()
     val views = Views(store, defaultExperiment, showcase)
     val hub = LiveHub()
-    val live = LiveViews(store, views, config, commands)
+    val live = LiveViews(store, views, config, commands, version)
     val kpis = Kpis(views, store, config)
     val report = Report(views, kpis)
     val log = LoggerFactory.getLogger("dashboard")

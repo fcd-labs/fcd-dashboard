@@ -133,6 +133,7 @@ data class LiveState(
     val commands: List<Command> = emptyList(),
     val demo: DemoState? = null,
     val running: List<RunningVersion> = emptyList(),
+    val dashboardVersion: String = "dev",
 )
 
 /** Tells the open live streams that a new log line arrived (one backend per showcase: in memory is enough). */
@@ -154,6 +155,7 @@ class LiveViews(
     private val views: Views,
     private val config: ShowcaseConfig,
     private val commands: CommandStore = InMemoryCommandStore(),
+    private val version: String = "dev",
 ) {
     /** Why a button cannot be pressed now, or null when it can. */
     fun refusal(request: CommandRequest): String? {
@@ -309,6 +311,7 @@ class LiveViews(
                         config.productTitle(last.product),
                     )
                 }.sortedBy { it.subProduct },
+            version,
         )
     }
 

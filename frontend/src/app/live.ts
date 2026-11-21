@@ -299,6 +299,8 @@ export class Live implements OnInit {
 
   /** A finished run stays large for keepFinishedSeconds (configuration), then it becomes a short line. */
   protected recent(run: LiveRun): boolean {
+    // One sub-product: its run stays as it is, so nothing on the screen moves.
+    if (this.runs().length <= 1) return true;
     if (run.outcome === 'running' || run.seconds === undefined) return true;
     const keep = (this.state()?.settings.keepFinishedSeconds ?? 600) * 1000;
     return this.now() - (Date.parse(run.started) + run.seconds * 1000) < keep;

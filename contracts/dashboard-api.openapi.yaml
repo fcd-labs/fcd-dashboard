@@ -555,6 +555,7 @@ components:
         runs: { type: array, items: { $ref: '#/components/schemas/LiveRun' } }
         controls: { $ref: '#/components/schemas/Controls' }
         commands: { type: array, items: { $ref: '#/components/schemas/Command' }, description: 'Pending and recent commands, newest first' }
+        dashboardVersion: { type: string, description: 'The version of the Dashboard (versions.env)' }
         demo:
           type: object
           description: 'Demo mode: where the demo is (from the log lines fcd-demo.reset and fcd-demo.merged of this experiment)'

@@ -24,12 +24,6 @@ h1 {
   font-weight: normal;
 }
 
-.hint {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-
 .experiment select {
   margin-left: 8px;
 }

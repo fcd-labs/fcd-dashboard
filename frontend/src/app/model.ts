@@ -287,6 +287,7 @@ export interface LiveState {
   commands: Command[];
   demo?: { phase: 'start' | 'merged'; unmerged: string[] };
   running: RunningVersion[];
+  dashboardVersion?: string;
 }
 
 export interface RunningVersion {

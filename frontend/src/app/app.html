@@ -55,9 +55,6 @@
   <main>
     @if (tab() === 'live') {
       <app-live [experiment]="experiment()" />
-      <p class="hint">
-        Toets <kbd>P</kbd>: presentatiemodus voor een groot scherm (<kbd>Esc</kbd>: terug).
-      </p>
     }
     @if (overview(); as o) {
       @if (o.products.length === 0 && tab() !== 'live') {

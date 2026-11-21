@@ -13,6 +13,15 @@
   }
 
   @if (state(); as s) {
+    @if (s.running.length === 0) {
+      <div class="status placeholder">
+        <p class="status-line"><strong class="product">&nbsp;</strong> nog niets uitgerold</p>
+        <div class="keyresult-bar waiting" data-state="waiting">
+          <span class="kr-label">Key result</span>
+          <span class="kr-count">nog geen bestelling van een gast</span>
+        </div>
+      </div>
+    }
     @for (v of s.running; track v.product + '/' + v.subProduct) {
       <div class="status" [attr.data-subproduct]="v.subProduct">
         <p class="status-line">
@@ -108,17 +117,10 @@
       </div>
     }
 
-    @if (runs().length === 0) {
-      <p class="none">
-        Nog geen runs in deze demo.
-        @if (s.controls.startButton) {
-          Start de pipeline met de knop.
-        } @else {
-          Start een pipeline met <code>fcd ci</code>, of de simulator.
-        }
-      </p>
-    }
     <div class="lanes" [attr.data-layout]="s.settings.layout">
+      @if (runs().length === 0) {
+        <article class="lane placeholder" aria-hidden="true"></article>
+      }
       @for (r of runs(); track r.product + '/' + r.subProduct) {
         <article
           class="lane"
@@ -253,15 +255,33 @@
         @if (!busy() && lastCommand(); as c) {
           <p class="msg" data-kind="info" [attr.data-status]="c.status">{{ commandText(c) }}</p>
         }
-        @if (messageCount() === 0) {
+        @if (runs().length === 0) {
+          <p class="msg" data-kind="info">
+            Nog geen runs in deze demo.
+            @if (s.controls.startButton) {
+              Start de pipeline met de knop.
+            } @else {
+              Start een pipeline met <code>fcd ci</code>, of de simulator.
+            }
+          </p>
+        }
+        @if (messageCount() === 0 && runs().length > 0) {
           <p class="msg none">Geen meldingen.</p>
         }
       </div>
     </section>
-    <p class="legend">
-      <span data-status="backlog">· backlog: nog niet gebouwd</span>
-      <span class="shortened">✂ ingekort voor de demo (afwijking)</span>
-    </p>
+    <footer class="foot">
+      <span class="legend"
+        ><span data-status="backlog">· backlog: nog niet gebouwd</span>
+        <span class="shortened">✂ ingekort voor de demo (afwijking)</span></span
+      >
+      <span class="version">Dashboard {{ s.dashboardVersion }}</span>
+      <span class="keys">
+        @if (!presentation()) {
+          Toets <kbd>P</kbd>: presentatiemodus (<kbd>Esc</kbd>: terug)
+        }
+      </span>
+    </footer>
   } @else {
     <p class="none">De live weergave wordt geladen…</p>
   }

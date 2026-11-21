@@ -42,6 +42,8 @@ services:
       DEFAULT_EXPERIMENT: ${DEFAULT_EXPERIMENT:-mvp0}
       SHOWCASE: ${FCD_SHOWCASE:?run via fcd (showcase)}
       FCD_CONFIG_DIR: /config
+      # The version of the sub-product Dashboard (versions.env), shown at the bottom of the live view.
+      DASHBOARD_VERSION: ${SUBPRODUCT_VERSION:?run via fcd (versions.env)}
     volumes:
       # The configuration of the showcase (fcd-<showcase>/fcd), read only: the steps, gates and their order, and what
       # the live view shows. Without it (an empty directory) the live view takes the order from the log lines.

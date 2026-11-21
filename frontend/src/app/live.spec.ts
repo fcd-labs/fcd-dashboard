@@ -160,6 +160,7 @@ function state(
     controls,
     commands,
     running: [],
+    dashboardVersion: '0.5.0',
     showcase: 'demo',
     experiment: 'sim',
     serverTime: now.toISOString(),
@@ -412,7 +413,13 @@ describe('Live', () => {
     push([]);
     expect(el.querySelector('.messages .conn')?.textContent).toContain('live');
     expect(el.textContent).toContain('Nog geen runs in deze demo');
-    expect(flat(el.querySelector('.messages .msg.none')?.textContent)).toBe('Geen meldingen.');
+    // Without runs the place of the run stays (a placeholder); the text is a message.
+    expect(el.querySelector('.lane.placeholder')).not.toBeNull();
+    expect(flat(el.querySelector('.messages .msg[data-kind="info"]')?.textContent)).toBe(
+      'Nog geen runs in deze demo. Start een pipeline met fcd ci, of de simulator.',
+    );
+    expect(flat(el.querySelector('.foot .version')?.textContent)).toBe('Dashboard 0.5.0');
+    expect(flat(el.querySelector('.foot .keys')?.textContent)).toContain('Toets P');
     fixture.destroy();
     expect(stream.closed).toBe(true);
   });
@@ -470,12 +477,20 @@ describe('Live', () => {
     expect(el.querySelector('[data-name="human"]')?.textContent).toContain('wacht');
   });
 
-  it('makes a finished run small after the time from the configuration', () => {
+  it('with more sub-products, a finished run becomes small after the time from the configuration', () => {
+    create();
+    push([{ ...failed, started: '2026-11-26T08:00:00Z' }, running]);
+    const old = el.querySelector('.lane[data-subproduct="payments"]')!;
+    expect(old.classList).toContain('small');
+    expect(old.querySelector('.line')).toBeNull();
+    expect(el.querySelector('.messages .outcome')).not.toBeNull();
+  });
+
+  it('with one sub-product, the run keeps its place: it never becomes small', () => {
     create();
     push([{ ...failed, started: '2026-11-26T08:00:00Z' }]);
-    expect(el.querySelector('.lane')?.classList).toContain('small');
-    expect(el.querySelector('.lane .line')).toBeNull();
-    expect(el.querySelector('.messages .outcome')).not.toBeNull();
+    expect(el.querySelector('.lane')?.classList).not.toContain('small');
+    expect(el.querySelector('.lane .line')).not.toBeNull();
   });
 
   it('in presentation mode: title, theme and size from the configuration, running sub-products first, no links', () => {
