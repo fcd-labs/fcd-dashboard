@@ -206,7 +206,9 @@ describe('App (dashboard)', () => {
     http.expectOne((r) => r.url === '/api/v1/keyresult').flush(keyResult);
     http
       .expectOne((r) => r.url === '/api/v1/report')
-      .flush('# Statusrapport showcase Demo\n| Experiment | mvp0 |');
+      .flush(
+        '<h1>Statusrapport showcase Demo</h1><table><tbody><tr><td>Experiment</td><td>mvp0</td></tr></tbody></table>',
+      );
     http.expectOne((r) => r.url === '/api/v1/changelog').flush(changelog);
     fixture.detectChanges();
   }
@@ -298,13 +300,15 @@ describe('App (dashboard)', () => {
     );
   });
 
-  it('shows the status report and offers it as a Markdown file', () => {
+  it('shows the status report as a readable page and offers it as a page and as Markdown', () => {
     flushAll();
     openTab('Statusrapport');
-    expect(el.querySelector('.report-text')?.textContent).toContain(
-      '# Statusrapport showcase Demo',
+    expect(el.querySelector('.report-html h1')?.textContent).toBe('Statusrapport showcase Demo');
+    expect(el.querySelector('.report-html td')?.textContent).toBe('Experiment');
+    expect(el.querySelector('.report a[data-format="html"]')?.getAttribute('href')).toBe(
+      '/api/v1/report?download=true&format=html',
     );
-    expect(el.querySelector('.report a')?.getAttribute('href')).toBe(
+    expect(el.querySelector('.report a[data-format="markdown"]')?.getAttribute('href')).toBe(
       '/api/v1/report?download=true',
     );
   });

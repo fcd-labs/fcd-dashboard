@@ -144,6 +144,24 @@ export class Live implements OnInit {
     return Object.entries(map ?? {}).map(([name, version]) => ({ name, version }));
   }
 
+  /** The sub-product that runs now has no order of a guest yet: the key result waits for one (not the old colour). */
+  protected awaiting(kr: KeyResultView): { title: string; version: string } | null {
+    const running = this.state()?.running?.[0];
+    if (!running || !kr.versions) return null;
+    return kr.versions.some((v) => v.version === running.version)
+      ? null
+      : { title: running.title, version: running.version };
+  }
+
+  protected versionResult(kr: KeyResultView, version: string | undefined) {
+    return kr.versions?.find((v) => v.version === version);
+  }
+
+  protected subProductTitle(): string {
+    const t = this.state()?.running?.[0]?.title;
+    return t ? t + ' ' : '';
+  }
+
   /** Red when the last order did not arrive everywhere (the key result now, not the history). */
   protected lastIncomplete(kr: KeyResultView): boolean {
     return (kr.receivers ?? []).some((r) => !r.lastArrived);

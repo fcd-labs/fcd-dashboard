@@ -424,6 +424,29 @@
                 ><span class="value">{{ percent(kr.percent) }}</span>
               </div>
             </div>
+            @if (kr.versions?.length) {
+              <h2>Per versie</h2>
+              <table class="versions">
+                <thead>
+                  <tr>
+                    <th>Versie</th>
+                    <th class="num">Bestellingen</th>
+                    <th class="num">Volledig aangekomen</th>
+                    <th class="num">Key result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (v of kr.versions; track v.version) {
+                    <tr [attr.data-version]="v.version">
+                      <td>{{ v.version }}</td>
+                      <td class="num">{{ v.orders }}</td>
+                      <td class="num">{{ v.complete }}</td>
+                      <td class="num">{{ percent(v.percent) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
             <h2>Niet volledig aangekomen</h2>
             <table>
               <thead>
@@ -544,12 +567,17 @@
       @if (tab() === 'report') {
         <section class="report">
           <p class="actions">
-            <a class="button" [href]="reportUrl()">Bewaren als Markdown (.md)</a>
+            <a class="button" data-format="html" [href]="reportUrl('html')"
+              >Bewaren als pagina (.html)</a
+            >
+            <a class="button" data-format="markdown" [href]="reportUrl()"
+              >Bewaren als Markdown (.md)</a
+            >
             <button type="button" class="button" (click)="print()">
               Afdrukken of bewaren als PDF
             </button>
           </p>
-          <pre class="report-text">{{ report() }}</pre>
+          <article class="report-html" [innerHTML]="report()"></article>
         </section>
       }
 

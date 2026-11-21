@@ -49,9 +49,15 @@ class Report(
             }
             appendLine()
 
-            appendLine("## Key result van Bestellen")
+            appendLine("## Key result")
             appendLine()
             appendLine("${kr.keyResult}: **${pct(kr.percent)}** (${kr.complete} van ${kr.orders} bestellingen volledig aangekomen).")
+            if (kr.versions.isNotEmpty()) {
+                appendLine()
+                appendLine("| Versie | Bestellingen | Volledig aangekomen | Key result |")
+                appendLine("|---|---|---|---|")
+                kr.versions.forEach { appendLine("| ${it.version} | ${it.orders} | ${it.complete} | ${pct(it.percent)} |") }
+            }
             if (kr.incomplete.isNotEmpty()) {
                 appendLine()
                 appendLine("Niet volledig aangekomen:")

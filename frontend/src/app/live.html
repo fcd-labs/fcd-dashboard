@@ -17,22 +17,46 @@
 
   @if (keyResult(); as kr) {
     @if (kr.receivers?.length) {
-      <div class="keyresult-bar" [class.bad]="lastIncomplete(kr)">
-        <span class="kr-label"
-          >Key result{{ kr.version ? ' (Bestellen ' + kr.version + ')' : '' }}</span
-        >
-        @for (r of kr.receivers; track r.name) {
-          <span class="receiver" [attr.data-arrived]="r.lastArrived" [attr.data-receiver]="r.name">
-            {{ r.lastArrived ? '✔' : '✖' }} {{ r.title }}
-            @if (r.stub) {
-              <small class="stub">stub</small>
-            }
-          </span>
-        }
-        <span class="kr-count"
-          >{{ kr.complete }} van {{ kr.orders }} bestellingen volledig aangekomen</span
-        >
-      </div>
+      @if (awaiting(kr); as a) {
+        <div class="keyresult-bar waiting" data-state="waiting">
+          <span class="kr-label">Key result ({{ a.title }} {{ a.version }})</span>
+          <span>nog geen bestelling van een gast gemeten – plaats een bestelling</span>
+          @if (versionResult(kr, kr.version); as p) {
+            <span class="kr-count"
+              >vorige versie {{ kr.version }}: {{ p.complete }} van {{ p.orders }} volledig
+              aangekomen</span
+            >
+          }
+        </div>
+      } @else {
+        <div class="keyresult-bar" [class.bad]="lastIncomplete(kr)">
+          <span class="kr-label"
+            >Key result{{ kr.version ? ' (' + subProductTitle() + kr.version + ')' : '' }}</span
+          >
+          @for (r of kr.receivers; track r.name) {
+            <span
+              class="receiver"
+              [attr.data-arrived]="r.lastArrived"
+              [attr.data-receiver]="r.name"
+            >
+              {{ r.lastArrived ? '✔' : '✖' }} {{ r.title }}
+              @if (r.stub) {
+                <small class="stub">stub</small>
+              }
+            </span>
+          }
+          @if (versionResult(kr, kr.version); as v) {
+            <span class="kr-count"
+              >{{ v.complete }} van {{ v.orders }} bestellingen met {{ kr.version }} volledig
+              aangekomen</span
+            >
+          } @else {
+            <span class="kr-count"
+              >{{ kr.complete }} van {{ kr.orders }} bestellingen volledig aangekomen</span
+            >
+          }
+        </div>
+      }
     }
   }
 

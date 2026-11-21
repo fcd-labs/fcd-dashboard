@@ -179,6 +179,7 @@ export interface KeyResultView {
     lastArrived: boolean;
     arrived: number;
   }[];
+  versions?: { version: string; orders: number; complete: number; percent?: number }[];
 }
 
 // The live view (GET /api/v1/live/state, and as Server-Sent Events on GET /api/v1/live).

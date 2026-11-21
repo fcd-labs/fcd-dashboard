@@ -43,9 +43,10 @@ export class DashboardApi {
     return this.http.get<KeyResultView>('/api/v1/keyresult', { params: this.params(experiment) });
   }
 
+  /** The status report as HTML for inside the Dashboard (the backend escapes every text). */
   report(experiment: string | null): Observable<string> {
     return this.http.get('/api/v1/report', {
-      params: this.params(experiment),
+      params: this.params(experiment).set('format', 'fragment'),
       responseType: 'text',
     });
   }
@@ -59,7 +60,9 @@ export class DashboardApi {
     return this.http.post<Command>('/api/v1/commands', { kind, ...extra });
   }
 
-  reportDownloadUrl(experiment: string | null): string {
-    return '/api/v1/report?' + this.params(experiment).set('download', 'true').toString();
+  reportDownloadUrl(experiment: string | null, format: 'markdown' | 'html' = 'markdown'): string {
+    let p = this.params(experiment).set('download', 'true');
+    if (format !== 'markdown') p = p.set('format', format);
+    return '/api/v1/report?' + p.toString();
   }
 }

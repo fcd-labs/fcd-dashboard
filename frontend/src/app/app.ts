@@ -216,8 +216,8 @@ export class App {
     return (this.kpis()?.trend ?? []).map((t) => t[key] as number | undefined);
   }
 
-  protected reportUrl(): string {
-    return this.api.reportDownloadUrl(this.experiment());
+  protected reportUrl(format: 'markdown' | 'html' = 'markdown'): string {
+    return this.api.reportDownloadUrl(this.experiment(), format);
   }
 
   protected print(): void {

@@ -472,3 +472,9 @@
 .running-version strong {
   color: var(--text);
 }
+
+.keyresult-bar.waiting {
+  border-color: var(--line);
+  border-left-color: var(--muted);
+  color: var(--muted);
+}

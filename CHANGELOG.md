@@ -12,6 +12,8 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 - Het key result bovenaan de live weergave: per ontvanger of de laatste bestelling aankwam, met "stub" erbij als een stub de ontvanger vervangt (configuratie: `Container.spec.stub` en `spec.receiver`).
 - Eén knop voor de demo: na "Demo opnieuw" wordt hij **Patch mergen** (zolang een klaarstaande wijziging niet gemerged is), na de merge (knop of terminal) weer **Demo opnieuw**. Afgeleid uit de logregels `fcd-demo.reset` en `fcd-demo.merged`.
 - **Draait nu**: per deelproduct de versie die het laatst is uitgerold, met de containerversies.
+- Het key result per versie (`versions`). De balk bovenaan de live weergave volgt de versie die draait: zolang die nog geen bestelling van een gast heeft, staat er "nog geen bestelling gemeten" (met de uitkomst van de vorige versie), niet de oude kleur. Tabblad Key result: een tabel per versie.
+- Het statusrapport om te lezen: in het Dashboard opgemaakt (koppen, tabellen), en te bewaren als pagina (`format=html`) of als Markdown. Alle tekst wordt eerst ge-escaped.
 - Tabblad **Changelog**: per deelproduct de changelog van de uitgerolde versie, met de containerversies (uit de logregel `service.deployed`). Als tekst, nooit als HTML.
 
 ### Gewijzigd

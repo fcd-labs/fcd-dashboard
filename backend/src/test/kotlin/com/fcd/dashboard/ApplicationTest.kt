@@ -166,7 +166,7 @@ class ApplicationTest {
             assertTrue(text.contains("| Showcase |"))
             assertTrue(text.contains("| Experiment | mvp0 |"))
             assertTrue(text.contains("| showkitchen / bestellen | uitgerold: 0.1.0 (bestellen-frontend 0.1.0, bestellen-backend 0.1.0) |"))
-            assertTrue(text.contains("## Key result van Bestellen"))
+            assertTrue(text.contains("## Key result"))
             assertTrue(text.contains("securitygate open"))
             assertTrue(text.contains("EXP-001 (bestellen, securitygate)"))
             assertTrue(text.contains("## KPI's (DORA)"))

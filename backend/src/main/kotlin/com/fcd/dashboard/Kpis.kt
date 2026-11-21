@@ -81,6 +81,15 @@ data class KeyResultView(
     val receivers: List<ReceiverView> = emptyList(),
     /** The version of the sub-product that measured the last order. */
     val version: String? = null,
+    /** The key result per version, in order of the first order: red at 1.0.0, green at 1.0.1. */
+    val versions: List<VersionResult> = emptyList(),
+)
+
+data class VersionResult(
+    val version: String,
+    val orders: Int,
+    val complete: Int,
+    val percent: Double?,
 )
 
 data class ReceiverView(
@@ -184,7 +193,13 @@ class Kpis(
                         },
                 )
             }
+        val versions =
+            measured.groupBy { version(it) }.map { (v, l) ->
+                val done = l.count { it.content.path("complete").asBoolean() }
+                VersionResult(v, l.size, done, percent(done, l.size))
+            }
         return KeyResultView(
+            versions = versions,
             receivers = receivers,
             version = measured.lastOrNull()?.let { version(it) },
             experiment = experiment,

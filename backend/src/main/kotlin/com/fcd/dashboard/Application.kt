@@ -4,6 +4,7 @@ import io.ktor.http.CacheControl
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.withCharset
 import io.ktor.serialization.jackson.JacksonConverter
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -172,14 +173,36 @@ fun Application.dashboard(
                     "true" -> true
                     else -> throw InvalidLoglineException("download must be true or false.")
                 }
+            val format = call.request.queryParameters["format"] ?: "markdown"
+            if (format !in
+                setOf("markdown", "html", "fragment")
+            ) {
+                throw InvalidLoglineException("format must be markdown, html or fragment.")
+            }
             val text = report.markdown(experiment)
+            val safe = views.experiment(experiment).replace(Regex("[^A-Za-z0-9._-]"), "_")
+            val base = "statusrapport-${showcase.ifBlank { "showcase" }}-$safe-${java.time.LocalDate.now(java.time.ZoneOffset.UTC)}"
             if (download) {
                 // Only safe characters in a header value.
-                val safe = views.experiment(experiment).replace(Regex("[^A-Za-z0-9._-]"), "_")
-                val name = "statusrapport-${showcase.ifBlank { "showcase" }}-$safe-${java.time.LocalDate.now(java.time.ZoneOffset.UTC)}.md"
+                val name = base + if (format == "markdown") ".md" else ".html"
                 call.response.headers.append("Content-Disposition", "attachment; filename=\"$name\"")
             }
-            call.respondText(text, ContentType.parse("text/markdown; charset=utf-8"))
+            when (format) {
+                "html" -> {
+                    call.respondText(
+                        ReportHtml.page(text, "Statusrapport ${showcase.ifBlank { "showcase" }} – $safe"),
+                        ContentType.Text.Html.withCharset(Charsets.UTF_8),
+                    )
+                }
+
+                "fragment" -> {
+                    call.respondText(ReportHtml.fragment(text), ContentType.Text.Html.withCharset(Charsets.UTF_8))
+                }
+
+                else -> {
+                    call.respondText(text, ContentType.parse("text/markdown; charset=utf-8"))
+                }
+            }
         }
         get("/api/v1/changelog") {
             call.respond(live.changelogs(call.experimentParam()))

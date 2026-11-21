@@ -214,12 +214,58 @@ describe('Live', () => {
 
   it('shows the key result per stub: red for the bar', () => {
     create();
-    push([]);
+    const s = state([]);
+    s.running = [{ subProduct: 'bestellen', title: 'Bestellen', version: '1.0.0' }];
+    stream.onState(s);
+    fixture.detectChanges();
     const bar = el.querySelector('[data-receiver="bar"]');
     expect(flat(bar?.textContent)).toBe('✖ bar stub');
     expect(bar?.getAttribute('data-arrived')).toBe('false');
     expect(el.querySelector('.keyresult-bar')?.classList).toContain('bad');
     expect(flat(el.querySelector('.kr-label')?.textContent)).toBe('Key result (Bestellen 1.0.0)');
+  });
+
+  it('the key result follows the version that runs: waiting for an order of 1.0.1, then green', () => {
+    create();
+    api.kr = {
+      ...api.kr,
+      orders: 1,
+      complete: 0,
+      version: '1.0.0',
+      versions: [{ version: '1.0.0', orders: 1, complete: 0, percent: 0 }],
+    };
+    const s = state([]);
+    s.running = [{ subProduct: 'bestellen', title: 'Bestellen', version: '1.0.1' }];
+    stream.onState(s);
+    fixture.detectChanges();
+    const bar = el.querySelector('.keyresult-bar')!;
+    expect(bar.getAttribute('data-state')).toBe('waiting');
+    expect(bar.classList).not.toContain('bad');
+    expect(flat(bar.querySelector('.kr-label')?.textContent)).toBe('Key result (Bestellen 1.0.1)');
+    expect(flat(bar.textContent)).toContain('nog geen bestelling van een gast gemeten');
+    expect(flat(bar.textContent)).toContain('vorige versie 1.0.0: 0 van 1 volledig aangekomen');
+
+    api.kr = {
+      ...api.kr,
+      orders: 2,
+      complete: 1,
+      version: '1.0.1',
+      versions: [
+        { version: '1.0.0', orders: 1, complete: 0, percent: 0 },
+        { version: '1.0.1', orders: 1, complete: 1, percent: 100 },
+      ],
+      receivers: api.kr.receivers!.map((r) => ({ ...r, lastArrived: true })),
+    };
+    stream.onState({ ...s });
+    fixture.detectChanges();
+    const green = el.querySelector('.keyresult-bar')!;
+    expect(green.classList).not.toContain('bad');
+    expect(flat(green.querySelector('.kr-label')?.textContent)).toBe(
+      'Key result (Bestellen 1.0.1)',
+    );
+    expect(flat(green.querySelector('.kr-count')?.textContent)).toBe(
+      '1 van 1 bestellingen met 1.0.1 volledig aangekomen',
+    );
   });
 
   it('the start button sends start-run; not while a pipeline runs', () => {

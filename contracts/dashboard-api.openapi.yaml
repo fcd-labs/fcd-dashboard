@@ -100,15 +100,18 @@ paths:
     get:
       tags: [dashboard]
       operationId: getReport
-      summary: Status report (Markdown)
+      summary: Status report - Markdown, a readable HTML page, or the HTML for inside the Dashboard
       parameters:
         - $ref: '#/components/parameters/experiment'
         - { name: download, in: query, required: false, schema: { type: string, enum: ['true', 'false'] } }
+        - { name: format, in: query, required: false, schema: { type: string, enum: [markdown, html, fragment], default: markdown }, description: 'html - a whole page to keep and read; fragment - the content only, for the Dashboard' }
       responses:
         '200':
           description: The status report.
           content:
             text/markdown:
+              schema: { type: string }
+            text/html:
               schema: { type: string }
         '400': { $ref: '#/components/responses/Problem' }
   /api/v1/tests:
@@ -518,6 +521,17 @@ components:
               at: { type: string, format: date-time }
               missing: { type: array, items: { type: string } }
         version: { type: string, description: 'Version of the sub-product that measured the last order' }
+        versions:
+          type: array
+          description: The key result per version of the sub-product, in order of the first order
+          items:
+            type: object
+            required: [version, orders, complete]
+            properties:
+              version: { type: string }
+              orders: { type: integer }
+              complete: { type: integer }
+              percent: { type: number }
         receivers:
           type: array
           description: Per receiver - did the last order arrive; stub when a stub stands in for it (configuration)
