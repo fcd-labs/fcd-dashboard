@@ -81,7 +81,7 @@ import { LiveStore } from './live-store';
       font-size: 0.85rem;
       font-weight: 600;
       height: 32px;
-      width: 15.5em;
+      width: 17.5em;
       padding: 0 10px;
       box-sizing: border-box;
       border-radius: 6px;
