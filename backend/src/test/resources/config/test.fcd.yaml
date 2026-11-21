@@ -1,0 +1,78 @@
+# A small showcase for the tests (FCD model), not a real showcase.
+---
+apiVersion: fcd/v0
+kind: Factory
+metadata: {name: test-factory}
+spec: {showcase: demo, experiment: mvp0, product: shop}
+---
+apiVersion: fcd/v0
+kind: Pipeline
+metadata: {name: pipeline}
+spec:
+  steps: [lint, unit-tests, build, deploy, release]
+---
+apiVersion: fcd/v0
+kind: Dashboard
+metadata: {name: dashboard}
+spec:
+  live:
+    subProducts: [orders]
+    environments: [lokaal, werkplek]
+    layout: side-by-side
+    keepFinishedSeconds: 120
+    presentation: {title: "Test live", theme: light, fontScale: 2, focusRunning: false}
+---
+apiVersion: fcd/v0
+kind: Step
+metadata: {name: lint, title: Lint}
+spec: {gate: code}
+---
+apiVersion: fcd/v0
+kind: Step
+metadata: {name: unit-tests, title: Unittests}
+spec: {gate: code, testType: unit}
+---
+apiVersion: fcd/v0
+kind: Step
+metadata: {name: build, title: Bouwen}
+spec: {gate: build}
+---
+apiVersion: fcd/v0
+kind: Step
+metadata: {name: deploy, title: Deployen}
+spec: {gate: deploy}
+---
+apiVersion: fcd/v0
+kind: Step
+metadata: {name: release, title: Releasen}
+spec: {gate: human}
+---
+apiVersion: fcd/v0
+kind: QualityGate
+metadata: {name: code, title: Codegate}
+spec: {afterSteps: [lint, unit-tests]}
+---
+apiVersion: fcd/v0
+kind: QualityGate
+metadata: {name: build, title: Bouwgate}
+spec: {afterSteps: [build]}
+---
+apiVersion: fcd/v0
+kind: QualityGate
+metadata: {name: deploy, title: Uitrolgate}
+spec: {afterSteps: [deploy]}
+---
+apiVersion: fcd/v0
+kind: QualityGate
+metadata: {name: human, title: Mensgate}
+spec: {beforeSteps: [release]}
+---
+apiVersion: fcd/v0
+kind: SubProduct
+metadata: {name: orders, title: Bestellingen}
+spec: {product: shop}
+---
+apiVersion: fcd/v0
+kind: Container
+metadata: {name: orders-backend}
+spec: {subProduct: orders}

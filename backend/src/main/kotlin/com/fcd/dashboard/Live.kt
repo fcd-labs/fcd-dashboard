@@ -1,0 +1,379 @@
+package com.fcd.dashboard
+
+import com.fasterxml.jackson.databind.JsonNode
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import java.time.Instant
+
+data class WaitingFor(
+    val kind: String,
+    val name: String,
+    val action: String?,
+)
+
+data class LiveTests(
+    val testType: String,
+    val tests: Int,
+    val passed: Int,
+    val failed: Int,
+    val skipped: Int,
+    val expected: Int?,
+    val finished: Boolean,
+)
+
+data class LiveItem(
+    val kind: String,
+    val name: String,
+    val title: String,
+    val status: String,
+    val step: Int? = null,
+    val startedAt: Instant? = null,
+    val seconds: Double? = null,
+    val reason: String? = null,
+    val excerpt: String? = null,
+    val explains: List<String> = emptyList(),
+    val waitingFor: WaitingFor? = null,
+    val tests: LiveTests? = null,
+)
+
+data class LiveFailure(
+    val title: String,
+    val reason: String?,
+    val excerpt: String?,
+    val failures: String?,
+)
+
+data class LiveRun(
+    val product: String,
+    val subProduct: String,
+    val title: String,
+    val run: String,
+    val version: String,
+    val environment: String,
+    val triggerKind: String,
+    val triggerName: String,
+    val releaseType: String,
+    val commit: String,
+    val started: Instant,
+    val finished: Instant?,
+    val outcome: String,
+    val seconds: Double?,
+    val stuckAt: String?,
+    val waitingFor: WaitingFor?,
+    val failure: LiveFailure?,
+    val tag: String?,
+    val deployed: Boolean,
+    val items: List<LiveItem>,
+)
+
+data class LiveState(
+    val showcase: String,
+    val experiment: String,
+    val serverTime: Instant,
+    val settings: LiveSettings,
+    val runs: List<LiveRun>,
+)
+
+/** Tells the open live streams that a new log line arrived (one backend per showcase: in memory is enough). */
+class LiveHub {
+    private val flow = MutableSharedFlow<String>(extraBufferCapacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val changes: SharedFlow<String> = flow.asSharedFlow()
+
+    fun changed(experiment: String) {
+        flow.tryEmit(experiment)
+    }
+}
+
+/**
+ * The live view: per sub-product the current (or last) run, with its steps and gates in the order of the configuration
+ * of the showcase. Without configuration: the order of the run itself (pipelinerun.started.steps, then the log lines).
+ */
+class LiveViews(
+    private val store: EventStore,
+    private val views: Views,
+    private val config: ShowcaseConfig,
+) {
+    fun state(requested: String?): LiveState {
+        val experiment = views.experiment(requested)
+        val settings = config.live
+        val lines =
+            store
+                .all(experiment)
+                .filter { it.run.isNotBlank() && it.subProduct.isNotBlank() }
+                .filter { settings.environments.isEmpty() || it.custom.path("environment").asText() in settings.environments }
+                .filter { settings.subProducts.isEmpty() || it.subProduct in settings.subProducts }
+        val runs =
+            lines
+                .groupBy { it.product to it.subProduct }
+                .mapNotNull { (_, l) ->
+                    // The run that started last (lines are in order of time, then of arrival: the last group wins a tie).
+                    l
+                        .groupBy { it.run }
+                        .values
+                        .lastOrNull()
+                        ?.let { run(it) }
+                }.sortedWith(
+                    compareBy<LiveRun>(
+                        { settings.subProducts.indexOf(it.subProduct).let { i -> if (i < 0) Int.MAX_VALUE else i } },
+                        { it.product },
+                        { it.subProduct },
+                    ),
+                )
+        return LiveState(views.showcase, experiment, Instant.now(), settings, runs)
+    }
+
+    private class StepState(
+        val name: String,
+        var title: String,
+        var step: Int? = null,
+        var startedAt: Instant? = null,
+        var finished: Boolean = false,
+        var outcome: String? = null,
+        var seconds: Double? = null,
+        var reason: String? = null,
+        var excerpt: String? = null,
+        var tests: LiveTests? = null,
+    )
+
+    private class GateState(
+        val name: String,
+        var title: String,
+        var started: Boolean = false,
+        var outcome: String? = null,
+        var reason: String? = null,
+        var explains: List<String> = emptyList(),
+        var waitingFor: WaitingFor? = null,
+    )
+
+    private fun run(lines: List<Logline>): LiveRun {
+        val first = lines.first()
+        val steps = linkedMapOf<String, StepState>()
+        val gates = linkedMapOf<String, GateState>()
+        // The order on the line: "step:<name>" and "gate:<name>".
+        val order = mutableListOf<String>()
+        config.lane.forEach { order += "${it.kind}:${it.name}" }
+        config.lane.forEach {
+            if (it.kind == "step") steps[it.name] = StepState(it.name, it.title) else gates[it.name] = GateState(it.name, it.title)
+        }
+        if (config.lane.isEmpty()) {
+            lines
+                .firstOrNull { it.shortType == "pipelinerun.started" }
+                ?.content
+                ?.path("steps")
+                ?.filter { it.isTextual }
+                ?.forEach { n ->
+                    if (steps.putIfAbsent(n.asText(), StepState(n.asText(), n.asText())) ==
+                        null
+                    ) {
+                        order += "step:${n.asText()}"
+                    }
+                }
+        }
+        var lastStep: String? = null
+
+        fun stepFor(name: String): StepState {
+            steps[name]?.let { return it }
+            val s = StepState(name, name)
+            steps[name] = s
+            // An unknown step: after the step that started last, else at the end.
+            val at = lastStep?.let { order.indexOf("step:$it") } ?: -1
+            if (at >= 0) order.add(at + 1, "step:$name") else order += "step:$name"
+            return s
+        }
+
+        fun gateFor(name: String): GateState {
+            gates[name]?.let { return it }
+            val g = GateState(name, name)
+            gates[name] = g
+            val at = lastStep?.let { order.indexOf("step:$it") } ?: -1
+            // After the last step and the gates already behind it.
+            var i = if (at >= 0) at + 1 else order.size
+            while (i < order.size && order[i].startsWith("gate:")) i++
+            order.add(i, "gate:$name")
+            return g
+        }
+
+        fun testStep(testType: String): StepState? =
+            config.steps.firstOrNull { it.testType == testType }?.let { stepFor(it.name) } ?: lastStep?.let { steps[it] }
+
+        var finishedLine: Logline? = null
+        var tag: String? = null
+        var deployed = false
+        for (line in lines) {
+            val c = line.content
+            when (line.shortType) {
+                "taskrun.started", "taskrun.finished" -> {
+                    val s = stepFor(c.path("taskName").asText())
+                    c
+                        .path("title")
+                        .asText("")
+                        .ifBlank { null }
+                        ?.let { if (s.title == s.name) s.title = it }
+                    if (c.path("step").isInt) s.step = c.path("step").asInt()
+                    if (line.shortType == "taskrun.started") {
+                        s.startedAt = line.timestamp
+                    } else {
+                        s.finished = true
+                        s.outcome = c.path("outcome").asText()
+                        s.seconds = line.custom.path("durationSeconds").asDouble()
+                        s.reason = c.text("reason")
+                        s.excerpt = c.text("excerpt")?.let(::oneLine)
+                        if (s.startedAt == null) s.startedAt = line.timestamp
+                    }
+                    lastStep = s.name
+                }
+
+                "testsuiterun.started", "testsuiterun.progressed", "testsuiterun.finished" -> {
+                    val type = c.path("testType").asText()
+                    val s = testStep(type) ?: continue
+                    val before = s.tests
+                    s.tests =
+                        LiveTests(
+                            testType = type,
+                            tests = c.path("tests").asInt(before?.tests ?: 0),
+                            passed = c.path("passed").asInt(before?.passed ?: 0),
+                            failed = c.path("failed").asInt(before?.failed ?: 0),
+                            skipped = c.path("skipped").asInt(before?.skipped ?: 0),
+                            expected = c.path("expected").takeIf { it.isInt }?.asInt() ?: before?.expected,
+                            finished = line.shortType == "testsuiterun.finished",
+                        )
+                    if (line.shortType == "testsuiterun.finished" && s.excerpt == null) s.excerpt = c.text("failures")?.let(::oneLine)
+                }
+
+                "qualitygate.started", "qualitygate.evaluated" -> {
+                    val g = gateFor(c.path("gate").asText())
+                    if (line.shortType == "qualitygate.started") {
+                        g.started = true
+                        g.waitingFor =
+                            c.path("waitingFor").takeIf { it.isObject }?.let {
+                                WaitingFor(it.path("kind").asText("human"), it.path("name").asText(), it.text("action"))
+                            }
+                    } else {
+                        g.outcome = c.path("outcome").asText()
+                        g.reason = c.text("reason")
+                        g.explains =
+                            c
+                                .path("explain")
+                                .asText("")
+                                .split(",")
+                                .filter { it.isNotBlank() }
+                        g.waitingFor = null
+                    }
+                }
+
+                "pipelinerun.finished" -> {
+                    finishedLine = line
+                }
+
+                "service.deployed" -> {
+                    deployed = true
+                }
+
+                "artifact.published" -> {
+                    tag = c.text("tag")
+                }
+            }
+        }
+        val running = finishedLine == null
+        val items =
+            order.map { key ->
+                val (kind, name) = key.split(":", limit = 2)
+                if (kind == "step") {
+                    val s = steps.getValue(name)
+                    LiveItem(
+                        kind = "step",
+                        name = name,
+                        title = s.title,
+                        status =
+                            when {
+                                s.finished -> s.outcome ?: "succeeded"
+                                s.startedAt != null && running -> "running"
+                                running -> "waiting"
+                                else -> "not-run"
+                            },
+                        step = s.step,
+                        startedAt = s.startedAt,
+                        seconds = s.seconds,
+                        reason = s.reason,
+                        excerpt = s.excerpt,
+                        tests = s.tests,
+                    )
+                } else {
+                    val g = gates.getValue(name)
+                    LiveItem(
+                        kind = "gate",
+                        name = name,
+                        title = g.title,
+                        status =
+                            when {
+                                g.outcome != null -> g.outcome!!
+                                g.waitingFor != null -> "waiting"
+                                g.started && running -> "deciding"
+                                running -> "pending"
+                                else -> "not-run"
+                            },
+                        reason = g.reason,
+                        explains = g.explains,
+                        waitingFor = g.waitingFor,
+                    )
+                }
+            }
+        val outcome = finishedLine?.content?.path("outcome")?.asText() ?: "running"
+        val failedStep = items.firstOrNull { it.kind == "step" && it.status == "failed" }
+        val closedGate = items.firstOrNull { it.kind == "gate" && it.status == "closed" }
+        val c = first.custom
+        return LiveRun(
+            product = first.product,
+            subProduct = first.subProduct,
+            title = config.subProductTitle(first.subProduct),
+            run = first.run,
+            version =
+                lines
+                    .last()
+                    .custom
+                    .path("subProduct")
+                    .path("version")
+                    .asText(),
+            environment = c.path("environment").asText(),
+            triggerKind = c.path("trigger").path("kind").asText(),
+            triggerName = c.path("trigger").path("name").asText(),
+            releaseType = c.path("releaseType").asText("planned"),
+            commit = c.path("commit").path("sha").asText(""),
+            started = lines.firstOrNull { it.shortType == "pipelinerun.started" }?.timestamp ?: first.timestamp,
+            finished = finishedLine?.timestamp,
+            outcome = outcome,
+            seconds = finishedLine?.custom?.path("durationSeconds")?.asDouble(),
+            stuckAt = closedGate?.name?.let { "$it-gate" } ?: failedStep?.title?.takeIf { outcome == "failure" },
+            waitingFor = items.firstOrNull { it.status == "waiting" && it.kind == "gate" }?.waitingFor,
+            failure =
+                failedStep?.let {
+                    LiveFailure(
+                        it.title,
+                        it.reason,
+                        it.excerpt,
+                        it.tests
+                            ?.takeIf { t ->
+                                t.failed > 0
+                            }?.let { t -> "${t.failed} van ${t.tests}" },
+                    )
+                },
+            tag = tag,
+            deployed = deployed,
+            items = items,
+        )
+    }
+
+    private fun JsonNode.text(field: String): String? = path(field).asText("").ifBlank { null }
+
+    companion object {
+        const val MAX_EXCERPT = 300
+
+        /** One line of output, at most [MAX_EXCERPT] characters. */
+        fun oneLine(text: String): String {
+            val line = text.replace(Regex("[\\r\\n\\t]+"), " ").trim()
+            return if (line.length <= MAX_EXCERPT) line else line.take(MAX_EXCERPT - 1) + "…"
+        }
+    }
+}

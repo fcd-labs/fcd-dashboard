@@ -359,6 +359,18 @@ class Views(
                     "${c.path("gate").asText()}-gate" to c.path("outcome").asText()
                 }
 
+                "qualitygate.started" -> {
+                    "${c.path("gate").asText()}-gate" to if (c.path("waitingFor").isObject) "waiting" else "running"
+                }
+
+                "testsuiterun.started" -> {
+                    "tests ${c.path("testType").asText()}" to "running"
+                }
+
+                "testsuiterun.progressed" -> {
+                    "tests ${c.path("testType").asText()} (${c.path("passed").asInt()}/${c.path("tests").asInt()})" to "running"
+                }
+
                 "testsuiterun.finished" -> {
                     "tests ${c.path("testType").asText()} (${c.path("passed").asInt()}/${c.path("tests").asInt()})" to
                         c.path("outcome").asText()

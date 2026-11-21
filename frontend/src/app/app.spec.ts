@@ -307,6 +307,21 @@ describe('App (dashboard)', () => {
     expect(row).toContain('dicht');
   });
 
+  it('has a live tab; the key P switches to presentation mode, Escape back', () => {
+    flushAll();
+    openTab('Live');
+    expect(el.querySelector('app-live')).not.toBeNull();
+    expect(el.querySelector('.live.presentation')).toBeNull();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' }));
+    fixture.detectChanges();
+    expect(el.querySelector('.live.presentation')).not.toBeNull();
+    expect(el.querySelector('.tabs')).toBeNull();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+    expect(el.querySelector('.live.presentation')).toBeNull();
+    expect(el.querySelector('.tabs')).not.toBeNull();
+  });
+
   it('says when there are no log lines yet', () => {
     flushAll({ ...overview, products: [] });
     expect(el.querySelector('.empty')?.textContent).toContain('Nog geen logregels');
