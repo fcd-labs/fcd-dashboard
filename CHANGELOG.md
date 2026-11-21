@@ -11,7 +11,7 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 - Presentatiemodus voor een groot scherm (`?presentatie` of toets `P`), ingesteld vanuit de configuratie.
 - Server-Sent Events: `GET /api/v1/live` duwt elke nieuwe logregel direct naar de browser; `GET /api/v1/live/state` geeft de stand als JSON.
 - Het Dashboard leest de configuratie van de showcase alleen-lezen (`FCD_CONFIG_DIR`): stappen, gates en `Dashboard.spec.live`.
-- Simulator (`java -jar app.jar simulate`): voorbeeld-logregels met echte tussentijden, scenario's voor een geslaagde run, een dichte codegate of securitygate, een noodpatch, een wachtende mensgate, twee deelproducten tegelijk en het opnieuw afspelen van een echte run.
+- Simulator (`java -jar app.jar simulate`): voorbeeld-logregels met echte tussentijden, scenario's voor een geslaagde run, een dichte codegate of securitygate, een noodpatch, een wachtende mensgate, twee deelproducten tegelijk en het opnieuw afspelen van een echte run. De logregels gaan naar experiment `test-sim`, dat nooit de standaardweergave wordt.
 
 ### Gewijzigd
 - Contract van de logregel 0.4.0: begin en einde per stap en per gate. Nieuw: `fcd-qualitygate.started` (met `waitingFor`), `testsuiterun.started`, `fcd-testsuiterun.progressed`; optioneel `excerpt` bij `taskrun.finished` en `steps` bij `pipelinerun.started`. Achterwaarts compatibel.

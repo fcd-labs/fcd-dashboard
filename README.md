@@ -38,14 +38,14 @@ Zonder configuratie werkt de live weergave ook: de volgorde komt dan uit de logr
 
 ### Simulator
 
-Voorbeeld-logregels met echte tussentijden, zodat de live weergave ook zonder de echte Pipeline werkt. Generiek: stappen, gates en deelproducten komen uit de configuratie. De logregels gaan naar een eigen experiment (`sim`), dus ze tellen niet mee in de KPI's van een echt experiment.
+Voorbeeld-logregels met echte tussentijden, zodat de live weergave ook zonder de echte Pipeline werkt. Generiek: stappen, gates en deelproducten komen uit de configuratie. De logregels gaan naar een eigen experiment (`test-sim`): ze tellen niet mee in de KPI's van een echt experiment, en zoals bij de end-to-end tests wordt het nooit de standaardweergave van het Dashboard.
 
 ```bash
 docker run --rm --network demo-dashboard_default -v "$PWD/../fcd-demo/fcd:/config:ro" \
   fcd/dashboard-backend:0.4.0 simulate --scenario codegate-dicht --speed 2 --approver Johannes
 ```
 
-Scenario's: `gelukt`, `codegate-dicht`, `securitygate-dicht`, `noodpatch`, `wacht-op-mens`, `parallel` (twee deelproducten tegelijk) en `replay --file <log.jsonl> [--run <id>]` (een echte run opnieuw afspelen; mount de map met de log). Daarna: `http://127.0.0.1:8070/?tab=live&experiment=sim`. Alle opties: `simulate --help`.
+Scenario's: `gelukt`, `codegate-dicht`, `securitygate-dicht`, `noodpatch`, `wacht-op-mens`, `parallel` (twee deelproducten tegelijk) en `replay --file <log.jsonl> [--run <id>]` (een echte run opnieuw afspelen; mount de map met de log). Daarna: `http://127.0.0.1:8070/?tab=live&experiment=test-sim`. Alle opties: `simulate --help`.
 
 ## Bouwen en testen
 

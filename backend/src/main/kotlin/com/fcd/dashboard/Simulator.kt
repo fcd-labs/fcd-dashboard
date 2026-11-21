@@ -21,7 +21,7 @@ import kotlin.system.exitProcess
 /**
  * The simulator: sends example log lines (contract 0.4.0) to a Dashboard, with real time between them, so the live view
  * works and can be shown without the real Pipeline. Generic: the steps, gates and sub-products come from the
- * configuration of the showcase. Its log lines go to their own experiment (default "sim").
+ * configuration of the showcase. Its log lines go to their own experiment (default "test-sim": like the end-to-end tests never the default view of the Dashboard).
  *
  *   java -jar app.jar simulate --scenario gelukt [--speed 2] [--url http://dashboard-backend:8080] [--config /config]
  */
@@ -54,7 +54,7 @@ data class SimulatorOptions(
     val speed: Double = 1.0,
     val url: String = System.getenv("DASHBOARD_URL") ?: "http://dashboard-backend:8080",
     val config: String = System.getenv("FCD_CONFIG_DIR") ?: "/config",
-    val experiment: String = "sim",
+    val experiment: String = "test-sim",
     val showcase: String? = System.getenv("SHOWCASE"),
     val subProducts: List<String> = emptyList(),
     val version: String = "0.1.0",
@@ -74,7 +74,7 @@ data class SimulatorOptions(
               --speed N            sneller (2 = twee keer zo snel; standaard 1)
               --url URL            het Dashboard (standaard http://dashboard-backend:8080)
               --config MAP         de configuratie van de showcase (standaard /config)
-              --experiment NAAM    eigen experiment voor de simulatie (standaard sim)
+              --experiment NAAM    eigen experiment voor de simulatie (standaard test-sim)
               --showcase NAAM      standaard uit de configuratie
               --sub-products A,B   standaard de deelproducten uit de configuratie
               --version X.Y.Z      versie van het deelproduct (standaard 0.1.0)

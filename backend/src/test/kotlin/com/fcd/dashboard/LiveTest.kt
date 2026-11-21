@@ -239,6 +239,16 @@ class LiveTest {
     }
 
     @Test
+    fun `a simulation never becomes the default view of the Dashboard`() {
+        val store = InMemoryEventStore()
+        val reader = LoglineReader()
+        val options = SimulatorOptions.parse(listOf("--scenario", "gelukt", "--config", configDir.toString()))
+        assertEquals("test-sim", options.experiment)
+        Simulator(options, sender = { store.add(reader.read(it)) }, sleeper = {}).run()
+        assertNull(store.latestExperiment())
+    }
+
+    @Test
     fun `excerpts are one short line`() {
         val long = "a\nb\r\n" + "x".repeat(400)
         val line = LiveViews.oneLine(long)
