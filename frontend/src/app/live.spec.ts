@@ -253,6 +253,9 @@ describe('Live', () => {
     expect(flat(bar.querySelector('.stub-versions')?.textContent)).toBe(
       'stubs 1.0.0: keuken · bar',
     );
+    expect(flat(el.querySelector('.foot .version')?.textContent)).toBe(
+      'ShowKitchen · Bestellen 1.0.0',
+    );
     expect(buttons().querySelector('[data-command="start-run"]')).not.toBeNull();
     // The key result is in its own tab, not on the live view.
     expect(el.querySelector('.keyresult-bar')).toBeNull();
@@ -395,7 +398,8 @@ describe('Live', () => {
     expect(flat(el.querySelector('.messages .msg[data-kind="info"]')?.textContent)).toBe(
       'Nog geen runs in deze demo. Start een pipeline met fcd ci, of de simulator.',
     );
-    expect(flat(el.querySelector('.foot .version')?.textContent)).toBe('Dashboard 0.5.0');
+    // The bottom line is about the product of the showcase; the version of the Dashboard is only a tooltip.
+    expect(el.querySelector('.foot .version')?.getAttribute('title')).toBe('Dashboard 0.5.0');
     expect(flat(el.querySelector('.foot .keys')?.textContent)).toContain('Toets P');
     fixture.destroy();
     expect(stream.closed).toBe(true);

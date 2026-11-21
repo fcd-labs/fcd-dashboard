@@ -75,23 +75,31 @@ import { LiveStore } from './live-store';
       gap: 6px;
       white-space: nowrap;
     }
+    /* Every button in the header has the same size and letter (also the choice of the demo, in app.css). */
     .btn {
       font: inherit;
       font-size: 0.85rem;
-      height: 30px;
-      min-width: 9.5em;
-      padding: 0 12px;
+      font-weight: 600;
+      height: 32px;
+      width: 15.5em;
+      padding: 0 10px;
+      box-sizing: border-box;
       border-radius: 6px;
       border: 1px solid var(--line);
       background: var(--card);
       color: var(--text);
       cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .confirm .btn {
+      width: 7.5em;
     }
     .btn.primary {
       background: var(--green);
       border-color: var(--green);
       color: #fff;
-      font-weight: 600;
     }
     .btn.danger {
       background: var(--red);

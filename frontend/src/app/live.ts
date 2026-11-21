@@ -189,6 +189,13 @@ export class Live implements OnInit {
     return m ? `${m[1]} ${m[4]}-${m[3]} ${m[5]}:${m[6]}` : (e ?? '');
   }
 
+  /** The bottom line is about the product of the showcase: "ShowKitchen · Bestellen 1.0.1". */
+  protected productVersion(s: LiveState): string {
+    if (!s.running.length) return '';
+    const product = s.running[0].productTitle || s.running[0].product || '';
+    return product + ' · ' + s.running.map((v) => `${v.title} ${v.version}`).join(' · ');
+  }
+
   /** The stubs, short: "stubs 1.0.0: keuken · bar · kassa" (grouped by version). */
   protected stubText(v: RunningVersion): string {
     const byVersion = new Map<string, string[]>();
