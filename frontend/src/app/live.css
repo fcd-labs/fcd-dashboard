@@ -86,7 +86,7 @@
   border: 1px solid var(--line);
   border-left: 0.35em solid var(--muted);
   border-radius: 8px;
-  padding: 0.8em 1em;
+  padding: 0.5em 0.8em;
   background: var(--card);
 }
 
@@ -103,7 +103,7 @@
 }
 
 .lane h3 {
-  margin: 0 0 0.6em;
+  margin: 0 0 0.3em;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -137,14 +137,15 @@
 
 .stop {
   position: relative;
-  flex: 1 0 6.5em;
+  flex: 1 0 5.4em;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 0.15em;
-  font-size: 0.85em;
-  padding: 0 0.2em;
+  gap: 0.1em;
+  font-size: 0.78em;
+  line-height: 1.25;
+  padding: 0 0.15em;
 }
 
 /* The line between the stops. */
@@ -477,4 +478,65 @@
   border-color: var(--line);
   border-left-color: var(--muted);
   color: var(--muted);
+}
+
+/* One screen without scrolling: the container rows side by side, the status in two short lines. */
+.container-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 34em), 1fr));
+  gap: 0 1.2em;
+}
+.container-rows .row + .row {
+  border-top: 0;
+  padding-top: 0;
+}
+.container-rows + .row {
+  border-top: 1px dashed var(--line);
+  padding-top: 0.3em;
+}
+.row {
+  grid-template-columns: 6.5em 1fr;
+}
+.status {
+  margin: 0.2em 0 0.4em;
+}
+.status-line {
+  margin: 0 0 0.3em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2em 0.9em;
+  align-items: baseline;
+}
+.status-line .product {
+  font-size: 1.1em;
+}
+.stub-versions span + span::before {
+  content: ' · ';
+  color: var(--muted);
+}
+.stub-versions,
+.running-version {
+  color: var(--muted);
+}
+.running-version strong {
+  color: var(--text);
+}
+.keyresult-bar {
+  margin: 0;
+  padding: 0.35em 0.8em;
+}
+.receiver[data-arrived='waiting'] {
+  color: var(--muted);
+}
+.controls {
+  margin: 0.3em 0;
+}
+.failure,
+.waiting,
+.closed,
+.outcome {
+  margin: 0.3em 0 0;
+}
+.legend {
+  margin: 0.3em 0 0;
 }

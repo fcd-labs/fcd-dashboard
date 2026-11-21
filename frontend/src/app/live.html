@@ -15,59 +15,42 @@
     </span>
   </header>
 
-  @if (keyResult(); as kr) {
-    @if (kr.receivers?.length) {
-      @if (awaiting(kr); as a) {
-        <div class="keyresult-bar waiting" data-state="waiting">
-          <span class="kr-label">Key result ({{ a.title }} {{ a.version }})</span>
-          <span>nog geen bestelling van een gast gemeten – plaats een bestelling</span>
-          @if (versionResult(kr, kr.version); as p) {
-            <span class="kr-count"
-              >vorige versie {{ kr.version }}: {{ p.complete }} van {{ p.orders }} volledig
-              aangekomen</span
-            >
-          }
-        </div>
-      } @else {
-        <div class="keyresult-bar" [class.bad]="lastIncomplete(kr)">
-          <span class="kr-label"
-            >Key result{{ kr.version ? ' (' + subProductTitle() + kr.version + ')' : '' }}</span
+  @if (state(); as s) {
+    @for (v of s.running; track v.product + '/' + v.subProduct) {
+      <div class="status" [attr.data-subproduct]="v.subProduct">
+        <p class="status-line">
+          <strong class="product">{{ v.productTitle || v.product }}</strong>
+          <span class="running-version"
+            >draait nu: <strong>{{ v.title }} {{ v.version }}</strong> ({{ parts(v) }})</span
           >
-          @for (r of kr.receivers; track r.name) {
-            <span
-              class="receiver"
-              [attr.data-arrived]="r.lastArrived"
-              [attr.data-receiver]="r.name"
-            >
-              {{ r.lastArrived ? '✔' : '✖' }} {{ r.title }}
-              @if (r.stub) {
-                <small class="stub">stub</small>
+          @if (v.stubs?.length) {
+            <span class="stub-versions"
+              >stubs:
+              @for (st of v.stubs; track st.name) {
+                <span>{{ st.title }} {{ st.version ?? '?' }}</span>
               }
             </span>
           }
-          @if (versionResult(kr, kr.version); as v) {
-            <span class="kr-count"
-              >{{ v.complete }} van {{ v.orders }} bestellingen met {{ kr.version }} volledig
-              aangekomen</span
-            >
-          } @else {
-            <span class="kr-count"
-              >{{ kr.complete }} van {{ kr.orders }} bestellingen volledig aangekomen</span
+        </p>
+        <div
+          class="keyresult-bar"
+          [class.bad]="krState(v) === 'bad'"
+          [class.waiting]="krState(v) === 'waiting'"
+          [attr.data-state]="krState(v)"
+        >
+          <span class="kr-label">Key result ({{ v.title }} {{ v.version }})</span>
+          @for (st of v.stubs ?? []; track st.name) {
+            <span
+              class="receiver"
+              [attr.data-arrived]="arrived(st.receiver, v)"
+              [attr.data-receiver]="st.receiver"
+              >{{ arrivedMark(arrived(st.receiver, v)) }} {{ st.title }}
+              <small class="stub">stub</small></span
             >
           }
+          <span class="kr-count">{{ krText(v) }}</span>
         </div>
-      }
-    }
-  }
-
-  @if (state(); as s) {
-    @for (v of s.running; track v.product + '/' + v.subProduct) {
-      <p class="running-version" [attr.data-subproduct]="v.subProduct">
-        Draait nu: <strong>{{ v.title }} {{ v.version }}</strong>
-        @for (c of containerList(v.containers); track c.name) {
-          · {{ c.name }} {{ c.version }}
-        }
-      </p>
+      </div>
     }
     @if (s.controls.startButton || s.controls.demoReset) {
       <div class="controls">
@@ -167,14 +150,16 @@
           </h3>
 
           @if (recent(r)) {
-            @for (c of r.containerRows ?? []; track c.container) {
-              <div class="row" [attr.data-container]="c.container">
-                <span class="row-title"
-                  >{{ c.title }} <small>{{ c.version }}</small></span
-                >
-                <ng-container *ngTemplateOutlet="line; context: { $implicit: c.items }" />
-              </div>
-            }
+            <div class="container-rows">
+              @for (c of r.containerRows ?? []; track c.container) {
+                <div class="row" [attr.data-container]="c.container">
+                  <span class="row-title"
+                    >{{ c.title }} <small>{{ c.version }}</small></span
+                  >
+                  <ng-container *ngTemplateOutlet="line; context: { $implicit: c.items }" />
+                </div>
+              }
+            </div>
             <div class="row" data-container="">
               @if (r.containerRows?.length) {
                 <span class="row-title"
@@ -219,7 +204,7 @@
               }
             </div>
           }
-          @if (gateClosed(r); as g) {
+          @if (!r.failure && gateClosed(r); as g) {
             <p class="closed">{{ g.title }} dicht: {{ g.reason }}</p>
           }
           @if (r.outcome !== 'running') {

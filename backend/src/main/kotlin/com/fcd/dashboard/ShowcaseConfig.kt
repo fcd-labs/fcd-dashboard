@@ -37,6 +37,8 @@ data class StubConfig(
     val name: String,
     val title: String,
     val receiver: String,
+    /** The name of the container in the code (docker compose), when it differs from the name in the configuration. */
+    val service: String? = null,
 )
 
 /** Which buttons the Dashboard shows. */
@@ -108,7 +110,10 @@ class ShowcaseConfig(
     val containerTitles: Map<String, String> = emptyMap(),
     /** Stubs by the receiver they stand in for (Container with spec.stub and spec.receiver). */
     val stubs: Map<String, StubConfig> = emptyMap(),
+    val productTitles: Map<String, String> = emptyMap(),
 ) {
+    fun productTitle(name: String): String = productTitles[name] ?: name
+
     fun receiverStub(receiver: String): StubConfig? = stubs[receiver]
 
     /** The row of a container: the steps of level container, with the backlog steps that come after one of them. */
@@ -333,9 +338,22 @@ class ShowcaseConfig(
                     .filter { it.path("spec").path("stub").asBoolean() && it.path("spec").optText("receiver") != null }
                     .associate {
                         val receiver = it.path("spec").optText("receiver")!!
-                        receiver to StubConfig(it.name(), it.title(), receiver)
+                        receiver to StubConfig(it.name(), it.title(), receiver, it.path("spec").optText("service"))
                     }
-            return ShowcaseConfig(showcase, steps, gates, subProducts, settings, backlog, explanations, controls, containerTitles, stubs)
+            val productTitles = ofKind("Product").associate { it.name() to it.title() }
+            return ShowcaseConfig(
+                showcase,
+                steps,
+                gates,
+                subProducts,
+                settings,
+                backlog,
+                explanations,
+                controls,
+                containerTitles,
+                stubs,
+                productTitles,
+            )
         }
     }
 }

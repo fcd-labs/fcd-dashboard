@@ -109,6 +109,16 @@ data class RunningVersion(
     val version: String,
     val containers: Map<String, String>,
     val deployedAt: Instant,
+    val stubs: List<StubView> = emptyList(),
+    val productTitle: String = product,
+)
+
+/** A stub that runs along, with its version (from service.deployed alongside) and the receiver it stands in for. */
+data class StubView(
+    val name: String,
+    val title: String,
+    val receiver: String,
+    val version: String?,
 )
 
 data class LiveState(
@@ -280,6 +290,7 @@ class LiveViews(
                 .groupBy { it.product to it.subProduct }
                 .map { (_, l) ->
                     val last = l.last()
+                    val along = last.content.path("alongside")
                     RunningVersion(
                         last.product,
                         last.subProduct,
@@ -290,6 +301,10 @@ class LiveViews(
                             .asText(),
                         last.containers(),
                         last.timestamp,
+                        config.stubs.values.map { s ->
+                            StubView(s.name, s.title, s.receiver, along.path(s.service ?: s.name).asText("").ifBlank { null })
+                        },
+                        config.productTitle(last.product),
                     )
                 }.sortedBy { it.subProduct },
         )

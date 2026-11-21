@@ -212,38 +212,57 @@ describe('Live', () => {
 
   const demo: Controls = { startButton: true, demoReset: true, approver: 'Johannes' };
 
-  it('shows the key result per stub: red for the bar', () => {
+  const stubs = [
+    { name: 'stub-keuken', title: 'keuken', receiver: 'kitchen', version: '1.0.0' },
+    { name: 'stub-bar', title: 'bar', receiver: 'bar', version: '1.0.0' },
+  ];
+  const runningAt = (version: string) => [
+    {
+      product: 'showkitchen',
+      productTitle: 'ShowKitchen',
+      subProduct: 'bestellen',
+      title: 'Bestellen',
+      version,
+      containers: { 'bestellen-frontend': '1.0.0', 'bestellen-backend': version },
+      stubs,
+    },
+  ];
+
+  it('shows ShowKitchen with what runs, the stubs with their version, and the key result per stub: red for the bar', () => {
     create();
+    api.kr = { ...api.kr, versions: [{ version: '1.0.0', orders: 1, complete: 0, percent: 0 }] };
     const s = state([]);
-    s.running = [{ subProduct: 'bestellen', title: 'Bestellen', version: '1.0.0' }];
+    s.running = runningAt('1.0.0');
     stream.onState(s);
     fixture.detectChanges();
+    expect(flat(el.querySelector('.status-line .product')?.textContent)).toBe('ShowKitchen');
+    expect(flat(el.querySelector('.running-version')?.textContent)).toBe(
+      'draait nu: Bestellen 1.0.0 (frontend 1.0.0 · backend 1.0.0)',
+    );
+    expect(
+      Array.from(el.querySelectorAll('.stub-versions span')).map((e) => flat(e.textContent)),
+    ).toEqual(['keuken 1.0.0', 'bar 1.0.0']);
     const bar = el.querySelector('[data-receiver="bar"]');
     expect(flat(bar?.textContent)).toBe('✖ bar stub');
     expect(bar?.getAttribute('data-arrived')).toBe('false');
-    expect(el.querySelector('.keyresult-bar')?.classList).toContain('bad');
+    expect(el.querySelector('.keyresult-bar')?.getAttribute('data-state')).toBe('bad');
     expect(flat(el.querySelector('.kr-label')?.textContent)).toBe('Key result (Bestellen 1.0.0)');
   });
 
-  it('the key result follows the version that runs: waiting for an order of 1.0.1, then green', () => {
+  it('the key result follows the version that runs: grey stubs until an order with 1.0.1, then green', () => {
     create();
-    api.kr = {
-      ...api.kr,
-      orders: 1,
-      complete: 0,
-      version: '1.0.0',
-      versions: [{ version: '1.0.0', orders: 1, complete: 0, percent: 0 }],
-    };
+    api.kr = { ...api.kr, versions: [{ version: '1.0.0', orders: 1, complete: 0, percent: 0 }] };
     const s = state([]);
-    s.running = [{ subProduct: 'bestellen', title: 'Bestellen', version: '1.0.1' }];
+    s.running = runningAt('1.0.1');
     stream.onState(s);
     fixture.detectChanges();
-    const bar = el.querySelector('.keyresult-bar')!;
-    expect(bar.getAttribute('data-state')).toBe('waiting');
-    expect(bar.classList).not.toContain('bad');
-    expect(flat(bar.querySelector('.kr-label')?.textContent)).toBe('Key result (Bestellen 1.0.1)');
-    expect(flat(bar.textContent)).toContain('nog geen bestelling van een gast gemeten');
-    expect(flat(bar.textContent)).toContain('vorige versie 1.0.0: 0 van 1 volledig aangekomen');
+    const grey = el.querySelector('.keyresult-bar')!;
+    expect(grey.getAttribute('data-state')).toBe('waiting');
+    expect(el.querySelector('[data-receiver="bar"]')?.getAttribute('data-arrived')).toBe('waiting');
+    expect(flat(el.querySelector('[data-receiver="bar"]')?.textContent)).toBe('○ bar stub');
+    expect(flat(grey.querySelector('.kr-count')?.textContent)).toBe(
+      'nog geen bestelling van een gast met 1.0.1 – plaats een bestelling (vorige versie 1.0.0: 0 van 1)',
+    );
 
     api.kr = {
       ...api.kr,
@@ -259,10 +278,8 @@ describe('Live', () => {
     stream.onState({ ...s });
     fixture.detectChanges();
     const green = el.querySelector('.keyresult-bar')!;
-    expect(green.classList).not.toContain('bad');
-    expect(flat(green.querySelector('.kr-label')?.textContent)).toBe(
-      'Key result (Bestellen 1.0.1)',
-    );
+    expect(green.getAttribute('data-state')).toBe('ok');
+    expect(flat(el.querySelector('[data-receiver="bar"]')?.textContent)).toBe('✔ bar stub');
     expect(flat(green.querySelector('.kr-count')?.textContent)).toBe(
       '1 van 1 bestellingen met 1.0.1 volledig aangekomen',
     );
@@ -307,19 +324,9 @@ describe('Live', () => {
     create();
     const s = state([], demo);
     s.demo = { phase: 'start', unmerged: ['sk-demo patch/1.0.1'] };
-    s.running = [
-      {
-        subProduct: 'bestellen',
-        title: 'Bestellen',
-        version: '1.0.0',
-        containers: { 'bestellen-frontend': '1.0.0', 'bestellen-backend': '1.0.0' },
-      },
-    ];
+    s.running = runningAt('1.0.0');
     stream.onState(s);
     fixture.detectChanges();
-    expect(flat(el.querySelector('.running-version')?.textContent)).toBe(
-      'Draait nu: Bestellen 1.0.0 · bestellen-frontend 1.0.0 · bestellen-backend 1.0.0',
-    );
     expect(el.querySelector('[data-command="demo-reset"]')).toBeNull();
     const merge = el.querySelector<HTMLButtonElement>('[data-command="demo-merge"]')!;
     expect(flat(merge.textContent)).toBe('⇄ Patch mergen (sk-demo patch/1.0.1)');
@@ -441,9 +448,8 @@ describe('Live', () => {
       'Unittests – 1 van 31 tests mislukt',
     );
     expect(lane.querySelector('.excerpt')?.textContent).toContain('expected status 400');
-    expect(flat(lane.querySelector('.closed')?.textContent)).toBe(
-      'Codegate dicht: unittests niet groen',
-    );
+    // The failure already says why; the closed gate is on the line (no repeat underneath).
+    expect(lane.querySelector('.closed')).toBeNull();
     expect(flat(lane.querySelector('.outcome')?.textContent)).toContain('✖ Mislukt in 0:40');
     expect(lane.querySelector('.outcome a')?.getAttribute('href')).toBe(
       '/?experiment=sim&subproduct=shop%2Fpayments&run=payments-r1',

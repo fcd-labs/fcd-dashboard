@@ -2,7 +2,15 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
 import { DashboardApi } from './dashboard-api';
 import { LiveStream } from './live-stream';
-import { Command, CommandKind, KeyResultView, LiveItem, LiveRun, LiveState } from './model';
+import {
+  Command,
+  CommandKind,
+  KeyResultView,
+  LiveItem,
+  LiveRun,
+  LiveState,
+  RunningVersion,
+} from './model';
 
 const stepText: Record<string, string> = {
   waiting: 'wachtend',
@@ -138,33 +146,47 @@ export class Live implements OnInit {
     });
   }
 
-  protected containerList(
-    map: Record<string, string> | undefined,
-  ): { name: string; version: string }[] {
-    return Object.entries(map ?? {}).map(([name, version]) => ({ name, version }));
+  /** The containers of the version that runs, short: "frontend 1.0.0 · backend 1.0.1". */
+  protected parts(v: RunningVersion): string {
+    return Object.entries(v.containers ?? {})
+      .map(([name, version]) => `${name.replace(v.subProduct + '-', '')} ${version}`)
+      .join(' · ');
   }
 
-  /** The sub-product that runs now has no order of a guest yet: the key result waits for one (not the old colour). */
-  protected awaiting(kr: KeyResultView): { title: string; version: string } | null {
-    const running = this.state()?.running?.[0];
-    if (!running || !kr.versions) return null;
-    return kr.versions.some((v) => v.version === running.version)
-      ? null
-      : { title: running.title, version: running.version };
+  protected versionResult(kr: KeyResultView | null, version: string | undefined) {
+    return kr?.versions?.find((r) => r.version === version);
   }
 
-  protected versionResult(kr: KeyResultView, version: string | undefined) {
-    return kr.versions?.find((v) => v.version === version);
+  /** Did the last order of a guest with the version that runs arrive at this receiver? waiting: no order yet. */
+  protected arrived(receiver: string, v: RunningVersion): 'true' | 'false' | 'waiting' {
+    const kr = this.keyResult();
+    if (!kr || kr.version !== v.version || !this.versionResult(kr, v.version)) return 'waiting';
+    const r = kr.receivers?.find((x) => x.name === receiver);
+    return r ? (r.lastArrived ? 'true' : 'false') : 'waiting';
   }
 
-  protected subProductTitle(): string {
-    const t = this.state()?.running?.[0]?.title;
-    return t ? t + ' ' : '';
+  protected arrivedMark(a: string): string {
+    return a === 'true' ? '✔' : a === 'false' ? '✖' : '○';
   }
 
-  /** Red when the last order did not arrive everywhere (the key result now, not the history). */
-  protected lastIncomplete(kr: KeyResultView): boolean {
-    return (kr.receivers ?? []).some((r) => !r.lastArrived);
+  /** The key result of the version that runs: red when the last order missed a receiver, grey without an order. */
+  protected krState(v: RunningVersion): 'ok' | 'bad' | 'waiting' {
+    const states = (v.stubs ?? []).map((s) => this.arrived(s.receiver, v));
+    if (states.includes('false')) return 'bad';
+    if (!this.versionResult(this.keyResult(), v.version)) return 'waiting';
+    return 'ok';
+  }
+
+  protected krText(v: RunningVersion): string {
+    const kr = this.keyResult();
+    const now = this.versionResult(kr, v.version);
+    if (now)
+      return `${now.complete} van ${now.orders} bestellingen met ${v.version} volledig aangekomen`;
+    const before = kr?.version ? this.versionResult(kr, kr.version) : undefined;
+    return (
+      `nog geen bestelling van een gast met ${v.version} – plaats een bestelling` +
+      (before ? ` (vorige versie ${kr!.version}: ${before.complete} van ${before.orders})` : '')
+    );
   }
 
   /** A command that is still with the Pipeline (pending or claimed). */

@@ -87,6 +87,10 @@ class DemoTest {
             kind: Container
             metadata: {name: orders-backend, title: backend}
             spec: {subProduct: orders}
+            ---
+            kind: Container
+            metadata: {name: stub-keuken, title: keuken}
+            spec: {stub: true, receiver: kitchen, service: stub-kitchen}
             """.trimIndent(),
         )
 
@@ -222,7 +226,12 @@ class DemoTest {
                 """{"startTag":"demo-start","saved":false,"branches":[{"repository":"shop","branch":"patch/1.0.1"}]}""",
                 runId = "",
             )
-        val deployed = line("dev.cdevents.service.deployed.0.2.0", """{"environment":{"id":"lokaal"},"artifactId":"x"}""", runId = "")
+        val deployed =
+            line(
+                "dev.cdevents.service.deployed.0.2.0",
+                """{"environment":{"id":"lokaal"},"artifactId":"x","alongside":{"stub-kitchen":"1.0.0"}}""",
+                runId = "",
+            )
         val merged = line("dev.cdeventsx.fcd-demo.merged.0.1.0", """{"repository":"shop","branch":"patch/1.0.1"}""", runId = "")
         val views = Views(InMemoryEventStore(), "sim", "demo")
 
@@ -232,6 +241,7 @@ class DemoTest {
         val r = atStart.running.single()
         assertEquals("Bestellen" to "1.0.1", r.title to r.version)
         assertEquals("1.0.0", r.containers["orders-frontend"])
+        assertEquals(listOf(StubView("stub-keuken", "keuken", "kitchen", "1.0.0")), r.stubs)
 
         val after = LiveViews(store(reset, deployed, merged), views, config)
         assertEquals(DemoState("merged", emptyList()), after.state("sim").demo)

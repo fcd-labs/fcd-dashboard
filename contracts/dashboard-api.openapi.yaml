@@ -570,11 +570,23 @@ components:
             required: [subProduct, title, version]
             properties:
               product: { type: string }
+              productTitle: { type: string }
               subProduct: { type: string }
               title: { type: string }
               version: { type: string }
               containers: { type: object, additionalProperties: { type: string } }
               deployedAt: { type: string, format: date-time }
+              stubs:
+                type: array
+                description: The stubs that run along (configuration Container.spec.stub), with their version and the receiver they stand in for
+                items:
+                  type: object
+                  required: [name, title, receiver]
+                  properties:
+                    name: { type: string }
+                    title: { type: string }
+                    receiver: { type: string }
+                    version: { type: string }
     Controls:
       type: object
       description: Which buttons the Dashboard shows (configuration of the showcase).

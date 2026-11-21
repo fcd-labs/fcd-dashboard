@@ -285,14 +285,18 @@ export interface LiveState {
   controls: Controls;
   commands: Command[];
   demo?: { phase: 'start' | 'merged'; unmerged: string[] };
-  running: {
-    product?: string;
-    subProduct: string;
-    title: string;
-    version: string;
-    containers?: Record<string, string>;
-    deployedAt?: string;
-  }[];
+  running: RunningVersion[];
+}
+
+export interface RunningVersion {
+  product?: string;
+  productTitle?: string;
+  subProduct: string;
+  title: string;
+  version: string;
+  containers?: Record<string, string>;
+  deployedAt?: string;
+  stubs?: { name: string; title: string; receiver: string; version?: string }[];
 }
 
 export interface Controls {
