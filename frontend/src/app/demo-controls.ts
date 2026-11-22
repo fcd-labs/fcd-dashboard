@@ -13,13 +13,13 @@ import { LiveStore } from './live-store';
         <div class="menu">
           <button
             type="button"
-            class="btn"
+            class="header-control"
             data-command="menu"
             aria-haspopup="menu"
             [attr.aria-expanded]="open()"
             (click)="toggle($event)"
           >
-            Bediening ▾
+            Bediening
           </button>
           @if (open()) {
             <div class="items" role="menu" (click)="$event.stopPropagation()">

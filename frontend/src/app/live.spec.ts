@@ -374,6 +374,25 @@ describe('Live', () => {
     expect(skipped.getAttribute('title')).toBe('frontend 1.0.0 ongewijzigd (draait al)');
   });
 
+  it('the newest message comes first: the waiting approval above the older command', () => {
+    create();
+    const older: Command = {
+      id: '1',
+      kind: 'demo-merge',
+      requestedBy: 'Johannes',
+      requestedAt: '2026-11-26T09:00:00Z',
+      status: 'done',
+    };
+    const waiting = { kind: 'human', name: 'Johannes', action: 'release goedkeuren' };
+    stream.onState(state([{ ...running, waitingFor: waiting }], demo, [older]));
+    fixture.detectChanges();
+    const kinds = Array.from(el.querySelectorAll('.messages .msg')).map((m) =>
+      m.getAttribute('data-kind'),
+    );
+    expect(kinds).toEqual(['waiting', 'info']);
+    expect(el.querySelector('[data-command="approve-release"]')?.classList).toContain('approve');
+  });
+
   it('a row per container, the backlog grey and a shortened step marked', () => {
     create();
     push([
@@ -411,7 +430,7 @@ describe('Live', () => {
     ]);
     const rows = el.querySelectorAll('.row');
     expect(rows.length).toBe(2);
-    expect(flat(rows[0].querySelector('.row-title')?.textContent)).toBe('frontend 1.0.0');
+    expect(flat(rows[0].querySelector('.row-title')?.textContent)).toBe('orders-frontend 1.0.0');
     expect(rows[0].querySelector('[data-name="coverage"]')?.getAttribute('data-status')).toBe(
       'backlog',
     );

@@ -8,7 +8,7 @@
   }
   @if (overview(); as o) {
     <select
-      class="experiment"
+      class="experiment header-control"
       (change)="chooseExperiment($any($event.target).value)"
       aria-label="Demoronde kiezen"
       title="Elke keer Demo opnieuw begint een nieuwe demoronde met een lege log; hier kies je een eerdere ronde om terug te kijken"

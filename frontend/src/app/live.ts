@@ -11,6 +11,15 @@ import {
   viewChild,
 } from '@angular/core';
 import { LiveStore } from './live-store';
+
+interface Message {
+  key: string;
+  kind: 'refused' | 'waiting' | 'failure' | 'closed' | 'outcome' | 'busy' | 'command';
+  time: number;
+  run?: LiveRun;
+  command?: Command;
+  text?: string;
+}
 import { LiveStream } from './live-stream';
 import { Command, CommandKind, LiveItem, LiveRun, LiveState, RunningVersion } from './model';
 
@@ -179,17 +188,50 @@ export class Live implements OnInit {
   }
 
   /** The messages and errors in their one fixed place. */
-  protected messageCount(): number {
-    let n =
-      (this.refused() ? 1 : 0) +
-      (this.busy() ? 1 : 0) +
-      (!this.busy() && this.lastCommand() ? 1 : 0);
+  /** The messages and errors in their one fixed place, the newest first. */
+  protected readonly messages = computed<Message[]>(() => {
+    const now = this.now();
+    const out: Message[] = [];
+    const refused = this.refused();
+    if (refused) out.push({ key: 'refused', kind: 'refused', time: now + 2, text: refused });
     for (const r of this.runs()) {
-      n +=
-        (r.waitingFor ? 1 : 0) + (r.failure ? 1 : 0) + (!r.failure && this.gateClosed(r) ? 1 : 0);
-      n += r.outcome !== 'running' ? 1 : 0;
+      const at = r.finished ? Date.parse(r.finished) : now;
+      const id = r.product + '/' + r.subProduct;
+      if (r.waitingFor) out.push({ key: id + ':waiting', kind: 'waiting', time: now + 1, run: r });
+      if (r.failure) out.push({ key: id + ':failure', kind: 'failure', time: at, run: r });
+      const g = !r.failure ? this.gateClosed(r) : undefined;
+      if (g)
+        out.push({
+          key: id + ':closed',
+          kind: 'closed',
+          time: at,
+          run: r,
+          text: `${g.title} dicht: ${g.reason}`,
+        });
+      if (r.outcome !== 'running')
+        out.push({ key: id + ':outcome', kind: 'outcome', time: at + 0.5, run: r });
     }
-    return n;
+    const busy = this.busy();
+    const last = this.lastCommand();
+    if (busy)
+      out.push({ key: 'busy', kind: 'busy', time: Date.parse(busy.requestedAt), command: busy });
+    else if (last)
+      out.push({
+        key: 'command',
+        kind: 'command',
+        time: Date.parse(last.requestedAt),
+        command: last,
+      });
+    return out.sort((a, b) => b.time - a.time);
+  });
+
+  protected messageCount(): number {
+    return this.messages().length;
+  }
+
+  /** A colour per sub-product: its name, its containers and their line have it. */
+  protected subProductColour(i: number): string {
+    return ['#7048e8', '#1c7ed6', '#0ca678', '#e8590c'][i % 4];
   }
 
   /** "demo-20261121-131229" -> "demo 21-11 13:12". */

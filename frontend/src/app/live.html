@@ -36,6 +36,7 @@
       }
       @for (r of runs(); track r.product + '/' + r.subProduct) {
         <article
+          [style.--sp]="subProductColour($index)"
           class="lane"
           [attr.data-outcome]="r.outcome"
           [attr.data-subproduct]="r.subProduct"
@@ -82,7 +83,7 @@
               @for (c of r.containerRows ?? []; track c.container) {
                 <div class="row" [attr.data-container]="c.container">
                   <span class="row-title"
-                    >{{ c.title }} <small>{{ c.version }}</small></span
+                    >{{ c.container }} <small>{{ c.version }}</small></span
                   >
                   <ng-container *ngTemplateOutlet="line; context: { $implicit: c.items }" />
                 </div>
@@ -151,68 +152,75 @@
         (scroll)="updateScroll(list)"
         (mouseenter)="updateScroll(list)"
       >
-        @if (refused(); as rf) {
-          <p class="msg" data-kind="error" role="alert">✖ {{ rf }}</p>
-        }
-        @for (r of runs(); track r.product + '/' + r.subProduct) {
-          @if (r.waitingFor; as w) {
-            <p class="msg" data-kind="waiting">
-              ⏸ {{ r.title }}: wacht op {{ w.name }}
-              @if (w.action) {
-                – {{ w.action }}
-              }
-              @if (s.controls.startButton && r.outcome === 'running') {
-                <button
-                  type="button"
-                  class="primary"
-                  data-command="approve-release"
-                  [disabled]="!approvable(r)"
-                  (click)="send('approve-release', { run: r.run })"
-                >
-                  ✔ Release goedkeuren
-                </button>
-              }
-            </p>
-          }
-          @if (r.failure; as f) {
-            <div class="msg failure" data-kind="error">
-              <p>
-                ✖ <strong>{{ f.title }}</strong>
-                @if (f.reason) {
-                  – {{ f.reason }}
-                } @else if (f.failures) {
-                  – {{ f.failures }} mislukt
+        @for (m of messages(); track m.key) {
+          @switch (m.kind) {
+            @case ('refused') {
+              <p class="msg" data-kind="error" role="alert">✖ {{ m.text }}</p>
+            }
+            @case ('waiting') {
+              <p class="msg" data-kind="waiting">
+                ⏸ {{ m.run!.title }}: wacht op {{ m.run!.waitingFor!.name }}
+                @if (m.run!.waitingFor!.action) {
+                  – {{ m.run!.waitingFor!.action }}
+                }
+                @if (s.controls.startButton && m.run!.outcome === 'running') {
+                  <button
+                    type="button"
+                    class="approve"
+                    data-command="approve-release"
+                    [disabled]="!approvable(m.run!)"
+                    (click)="send('approve-release', { run: m.run!.run })"
+                  >
+                    ✔ Release goedkeuren
+                  </button>
                 }
               </p>
-              @if (f.excerpt) {
-                <code class="excerpt">{{ f.excerpt }}</code>
-              }
-            </div>
+            }
+            @case ('failure') {
+              <div class="msg failure" data-kind="error">
+                <p>
+                  ✖ <strong>{{ m.run!.failure!.title }}</strong>
+                  @if (m.run!.failure!.reason) {
+                    – {{ m.run!.failure!.reason }}
+                  } @else if (m.run!.failure!.failures) {
+                    – {{ m.run!.failure!.failures }} mislukt
+                  }
+                </p>
+                @if (m.run!.failure!.excerpt) {
+                  <code class="excerpt">{{ m.run!.failure!.excerpt }}</code>
+                }
+              </div>
+            }
+            @case ('closed') {
+              <p class="msg closed" data-kind="error">{{ m.text }}</p>
+            }
+            @case ('outcome') {
+              <p
+                class="msg outcome"
+                [attr.data-kind]="m.run!.outcome === 'success' ? 'ok' : 'error'"
+              >
+                {{ m.run!.outcome === 'success' ? '✔ Gelukt' : '✖ Mislukt' }} in
+                {{ clock(m.run!.seconds) }} – {{ m.run!.title }} {{ m.run!.version }}
+                @if (m.run!.deployed) {
+                  · uitgerold
+                }
+                @if (m.run!.tag) {
+                  · gereleased ({{ m.run!.tag }})
+                }
+                @if (!presentation()) {
+                  · <a [href]="runLink(m.run!)">Bekijk de run →</a>
+                }
+              </p>
+            }
+            @case ('busy') {
+              <p class="msg" data-kind="info">⏳ {{ commandText(m.command!) }}</p>
+            }
+            @case ('command') {
+              <p class="msg" data-kind="info" [attr.data-status]="m.command!.status">
+                {{ commandText(m.command!) }}
+              </p>
+            }
           }
-          @if (!r.failure && gateClosed(r); as g) {
-            <p class="msg closed" data-kind="error">{{ g.title }} dicht: {{ g.reason }}</p>
-          }
-          @if (r.outcome !== 'running') {
-            <p class="msg outcome" [attr.data-kind]="r.outcome === 'success' ? 'ok' : 'error'">
-              {{ r.outcome === 'success' ? '✔ Gelukt' : '✖ Mislukt' }} in {{ clock(r.seconds) }} –
-              {{ r.title }} {{ r.version }}
-              @if (r.deployed) {
-                · uitgerold
-              }
-              @if (r.tag) {
-                · gereleased ({{ r.tag }})
-              }
-              @if (!presentation()) {
-                · <a [href]="runLink(r)">Bekijk de run →</a>
-              }
-            </p>
-          }
-        }
-        @if (busy(); as c) {
-          <p class="msg" data-kind="info">⏳ {{ commandText(c) }}</p>
-        }
-        @if (!busy() && lastCommand(); as c) {
-          <p class="msg" data-kind="info" [attr.data-status]="c.status">{{ commandText(c) }}</p>
         }
         @if (runs().length === 0) {
           <p class="msg" data-kind="info">

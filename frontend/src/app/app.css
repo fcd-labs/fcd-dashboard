@@ -40,20 +40,6 @@ h1 {
   font-weight: normal;
 }
 
-select.experiment {
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  height: 32px;
-  width: 17.5em;
-  padding: 0 8px;
-  box-sizing: border-box;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--text);
-}
-
 .tabs {
   display: flex;
   gap: 4px;

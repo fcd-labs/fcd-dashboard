@@ -951,3 +951,21 @@
   background: var(--card);
   color: var(--text);
 }
+
+/* The approve button: green, the one action that asks for attention. */
+.messages button.approve {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+/* A colour per sub-product: its name, its containers (repository-container names) and the line that holds them. */
+.lane h3 .name,
+.lane .row-title {
+  color: var(--sp, var(--text));
+}
+.live .lane .container-rows {
+  border-left: 3px solid var(--sp, var(--line));
+}
+.lane .row-title small {
+  color: var(--muted);
+}
