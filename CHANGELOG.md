@@ -16,6 +16,7 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 - Live: elk vlak houdt zijn plaats (vaste hoogtes, lege plaatshouders); de meldingen (ook "nog geen runs" en Demo opnieuw) op één vaste plek, twee regels hoog met scroll-indicatie; onderin links de legenda, in het midden de versie van het Dashboard, rechts de toetsen.
 - Live: meer ruimte voor de pipeline. Het key result per stub staat in het tabblad Key result; de knoppen staan klein op de regel van het product; de meldingen hebben een zichtbare scrollbalk.
 - Live vult het scherm: de pipeline krijgt alle ruimte die over is, de meldingen staan onderaan boven de voetregel met eigen ▲▼-knoppen (ook waar de browser de scrollbalk verbergt). De knoppen staan even groot in de header (eigen component, gedeelde toestand met de live weergave).
+- Startpagina (Home) met uitleg en het menu als kaarten. De knoppen zakelijk en rustig in één menu "Bediening". De tijd van een run met een wekker die rinkelt zolang de pipeline loopt. Frontend en backend ingesprongen onder het deelproduct.
 - Het statusrapport om te lezen: in het Dashboard opgemaakt (koppen, tabellen), en te bewaren als pagina (`format=html`) of als Markdown. Alle tekst wordt eerst ge-escaped.
 - Tabblad **Changelog**: per deelproduct de changelog van de uitgerolde versie, met de containerversies (uit de logregel `service.deployed`). Als tekst, nooit als HTML.
 

@@ -16,6 +16,7 @@ import {
 } from './model';
 
 export type Tab =
+  | 'home'
   | 'live'
   | 'status'
   | 'kpis'
@@ -51,7 +52,7 @@ export const gateText: Record<string, string> = {
   build: 'Bouwgate',
   security: 'Securitygate',
   deploy: 'Uitrolgate',
-  human: 'Mensgate',
+  human: 'Goedkeuring',
 };
 
 export const testTypeText: Record<string, string> = {
@@ -85,6 +86,7 @@ export class App {
 
   private startTab(): Tab {
     const tabs: Tab[] = [
+      'home',
       'live',
       'status',
       'kpis',
@@ -97,7 +99,8 @@ export class App {
     const asked = this.params.get('tab') as Tab | null;
     if (asked && tabs.includes(asked)) return asked;
     if (this.params.has('subproduct')) return 'status';
-    return 'live';
+    if (this.params.has('presentatie')) return 'live';
+    return 'home';
   }
   /** From the address (?experiment=...), else the Dashboard chooses the current experiment. */
   protected readonly experiment = signal<string | null>(this.params.get('experiment'));
@@ -171,6 +174,50 @@ export class App {
       error: () => this.error.set(true),
     });
   }
+
+  /** The start page: every part of the Dashboard, what it shows. */
+  protected readonly homeItems: { tab: Tab; title: string; text: string }[] = [
+    {
+      tab: 'live',
+      title: 'Live',
+      text: 'De pipeline live, stap voor stap: per container en voor het deelproduct, met de quality gates en de meldingen. Hier start je de pipeline en de demo (Bediening).',
+    },
+    {
+      tab: 'status',
+      title: 'Pipelines en gates',
+      text: 'Per product en deelproduct de laatste run, de quality gates met hun reden en de goedgekeurde afwijkingen.',
+    },
+    {
+      tab: 'kpis',
+      title: "KPI's",
+      text: 'De DORA-metrics: hoe vaak er wordt uitgerold, hoe lang een wijziging erover doet en hoe vaak een gate dichtvalt.',
+    },
+    {
+      tab: 'keyresult',
+      title: 'Key result',
+      text: 'Haalt het product zijn doel? Het key result van de intent, per versie en per ontvanger.',
+    },
+    {
+      tab: 'changelog',
+      title: 'Changelog',
+      text: 'Wat er per versie veranderde, tot en met de versie die nu draait.',
+    },
+    {
+      tab: 'tests',
+      title: 'Testresultaten',
+      text: 'Unit-, integratie- en end-to-end tests per deelproduct, met de mislukte tests.',
+    },
+    {
+      tab: 'loglines',
+      title: 'Logregels',
+      text: 'Elke stap en gate als logregel: het materiaal waar dit Dashboard uit bestaat.',
+    },
+    {
+      tab: 'report',
+      title: 'Statusrapport',
+      text: 'Alles samen als rapport om te lezen, te bewaren of te delen.',
+    },
+  ];
 
   /** The last order did not arrive at every receiver. */
   protected lastIncomplete(kr: KeyResultView): boolean {

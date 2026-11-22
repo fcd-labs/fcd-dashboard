@@ -218,6 +218,14 @@ describe('Live', () => {
   function buttons(): HTMLElement {
     controls ??= TestBed.createComponent(DemoControls);
     controls.detectChanges();
+    // The buttons are in the quiet menu "Bediening": open it.
+    const menu = (controls.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      '[data-command="menu"]',
+    );
+    if (menu && menu.getAttribute('aria-expanded') !== 'true') {
+      menu.click();
+      controls.detectChanges();
+    }
     return controls.nativeElement;
   }
 
@@ -263,7 +271,7 @@ describe('Live', () => {
     stream.onState(state([], demo));
     fixture.detectChanges();
     const start = buttons().querySelector<HTMLButtonElement>('[data-command="start-run"]')!;
-    expect(flat(start.textContent)).toBe('▶ Pipeline starten (Johannes)');
+    expect(flat(start.textContent)).toBe('Pipeline starten (Johannes)');
     start.click();
     expect(api.sent).toEqual([{ kind: 'start-run', extra: {} }]);
 
@@ -306,7 +314,7 @@ describe('Live', () => {
     fixture.detectChanges();
     expect(buttons().querySelector('[data-command="demo-reset"]')).toBeNull();
     const merge = buttons().querySelector<HTMLButtonElement>('[data-command="demo-merge"]')!;
-    expect(flat(merge.textContent)).toBe('⇄ Patch mergen');
+    expect(flat(merge.textContent)).toBe('Patch mergen');
     expect(merge.getAttribute('title')).toBe('Merge sk-demo patch/1.0.1');
     merge.click();
     expect(api.sent).toEqual([{ kind: 'demo-merge', extra: {} }]);

@@ -79,7 +79,7 @@ data class SimulatorOptions(
               --sub-products A,B   standaard de deelproducten uit de configuratie
               --version X.Y.Z      versie van het deelproduct (standaard 0.1.0)
               --trigger-name NAAM  wie de run start (standaard Simulator)
-              --approver NAAM      wie de mensgate goedkeurt (standaard de product owner)
+              --approver NAAM      wie de goedkeuring geeft (standaard de product owner)
               --file LOG.jsonl     bij replay: een log van een showcase
               --run ID             bij replay: welke run (standaard de laatste)
             """.trimIndent()

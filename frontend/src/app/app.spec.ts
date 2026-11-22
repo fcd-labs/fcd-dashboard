@@ -231,11 +231,29 @@ describe('App (dashboard)', () => {
 
   afterEach(() => fixture.destroy());
 
-  it('opens on the live view (home)', () => {
+  it('opens on the start page: what the Dashboard shows, the menu as cards, what runs', () => {
     flushAll();
-    expect(el.querySelector('.tabs button[aria-selected="true"]')?.textContent?.trim()).toBe(
-      'Live',
+    const selected = () =>
+      el.querySelector('.tabs button[aria-selected="true"]')?.textContent?.trim();
+    expect(selected()).toBe('Home');
+    expect(el.querySelector('.home h2')?.textContent).toContain('Showcase demo');
+    const cards = Array.from(el.querySelectorAll('.home .card')).map((c) =>
+      c.getAttribute('data-tab'),
     );
+    expect(cards).toEqual([
+      'live',
+      'status',
+      'kpis',
+      'keyresult',
+      'changelog',
+      'tests',
+      'loglines',
+      'report',
+    ]);
+    expect(el.querySelector('.home .now')?.textContent).toContain('showkitchen');
+    (el.querySelector('.home .card[data-tab="live"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(selected()).toBe('Live');
     expect(el.querySelector('app-live')).not.toBeNull();
   });
 

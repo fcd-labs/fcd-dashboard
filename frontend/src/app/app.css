@@ -451,3 +451,44 @@ tr.sum td {
   border-radius: 0.3em;
   font-size: 0.75em;
 }
+
+.home h2 {
+  margin: 8px 0 6px;
+}
+.home .lead {
+  max-width: 60em;
+  line-height: 1.5;
+}
+.home .now {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16em, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.card {
+  font: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+.card:hover {
+  border-color: var(--accent);
+}
+.card span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}

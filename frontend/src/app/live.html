@@ -55,7 +55,26 @@
                 >◆ {{ g.title }} {{ statusText(g) }}</span
               >
             }
-            <span class="time">{{ runTime(r) }}</span>
+            <span class="time" [class.ticking]="r.outcome === 'running'">
+              <svg class="alarm" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2" />
+                <path
+                  d="M12 9v4l2.5 2"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M4 5l3-2.5M20 5l-3-2.5M7 21l1.5-2M17 21l-1.5-2"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+              {{ runTime(r) }}
+            </span>
           </h3>
 
           @if (recent(r)) {

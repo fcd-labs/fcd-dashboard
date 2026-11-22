@@ -895,3 +895,59 @@
 [data-status='unchanged'] .state {
   color: var(--green);
 }
+
+/* The time of the run, with an alarm clock that rings while the pipeline runs. */
+.time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+.alarm {
+  width: 1.1em;
+  height: 1.1em;
+  color: var(--muted);
+}
+.time.ticking .alarm {
+  color: var(--amber);
+  animation: ring 1.2s ease-in-out infinite;
+  transform-origin: 50% 55%;
+}
+@keyframes ring {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  10% {
+    transform: rotate(14deg);
+  }
+  20% {
+    transform: rotate(-12deg);
+  }
+  30% {
+    transform: rotate(10deg);
+  }
+  40% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .time.ticking .alarm {
+    animation: none;
+  }
+}
+/* Frontend and backend are parts of Bestellen: indented under its name, with a line from the name. */
+.live .container-rows {
+  margin-left: 1.6em;
+  padding-left: 0.8em;
+  border-left: 2px solid var(--line);
+}
+/* The approve button in the messages: businesslike, the same quiet colour as the menu. */
+.messages button:not(.scroll-btn) {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+}

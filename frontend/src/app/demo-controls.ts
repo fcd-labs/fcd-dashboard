@@ -1,100 +1,102 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { LiveStore } from './live-store';
 
-/** The buttons of the product owner, in the header: start the pipeline, merge the patch, reset the demo. */
+/**
+ * The buttons of the product owner, out of the way: one quiet "Bediening" menu in the header with
+ * start the pipeline, merge the patch and reset the demo.
+ */
 @Component({
   selector: 'app-demo-controls',
   template: `
     @if (store.state(); as s) {
       @if (s.controls.startButton || s.controls.demoReset) {
-        <div class="demo-controls">
-          @if (s.controls.startButton) {
-            <button
-              type="button"
-              class="btn primary"
-              data-command="start-run"
-              [disabled]="store.running() || !!store.busy()"
-              (click)="store.send('start-run')"
-            >
-              ▶ Pipeline starten{{ s.controls.approver ? ' (' + s.controls.approver + ')' : '' }}
-            </button>
-          }
-          @if (s.controls.demoReset && s.demo?.phase === 'start') {
-            <button
-              type="button"
-              class="btn"
-              data-command="demo-merge"
-              [disabled]="store.running() || !!store.busy()"
-              [title]="'Merge ' + s.demo!.unmerged.join(', ')"
-              (click)="store.send('demo-merge')"
-            >
-              ⇄ Patch mergen
-            </button>
-          } @else if (s.controls.demoReset) {
-            <span class="anchor">
-              <button
-                type="button"
-                class="btn"
-                data-command="demo-reset"
-                [disabled]="store.running() || !!store.busy()"
-                (click)="confirmReset.set(!confirmReset())"
-              >
-                ↺ Demo opnieuw
-              </button>
-              @if (confirmReset()) {
-                <span class="confirm" role="dialog" aria-label="Demo opnieuw bevestigen">
-                  <label
-                    ><input
-                      type="checkbox"
-                      [checked]="saveFirst()"
-                      (change)="saveFirst.set($any($event.target).checked)"
-                    />
-                    eerst bewaren</label
-                  >
+        <div class="menu">
+          <button
+            type="button"
+            class="btn"
+            data-command="menu"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="open()"
+            (click)="toggle($event)"
+          >
+            Bediening ▾
+          </button>
+          @if (open()) {
+            <div class="items" role="menu" (click)="$event.stopPropagation()">
+              @if (s.controls.startButton) {
+                <button
+                  type="button"
+                  role="menuitem"
+                  class="item"
+                  data-command="start-run"
+                  [disabled]="store.running() || !!store.busy()"
+                  (click)="run('start-run')"
+                >
+                  Pipeline starten{{ s.controls.approver ? ' (' + s.controls.approver + ')' : '' }}
+                </button>
+              }
+              @if (s.controls.demoReset && s.demo?.phase === 'start') {
+                <button
+                  type="button"
+                  role="menuitem"
+                  class="item"
+                  data-command="demo-merge"
+                  [disabled]="store.running() || !!store.busy()"
+                  [title]="'Merge ' + s.demo!.unmerged.join(', ')"
+                  (click)="run('demo-merge')"
+                >
+                  Patch mergen
+                </button>
+              } @else if (s.controls.demoReset) {
+                @if (!confirmReset()) {
                   <button
                     type="button"
-                    class="btn danger"
-                    data-command="demo-reset-confirm"
-                    (click)="reset()"
+                    role="menuitem"
+                    class="item"
+                    data-command="demo-reset"
+                    [disabled]="store.running() || !!store.busy()"
+                    (click)="confirmReset.set(true)"
                   >
-                    Ja, opnieuw
+                    Demo opnieuw…
                   </button>
-                  <button type="button" class="btn" (click)="confirmReset.set(false)">Nee</button>
-                </span>
+                } @else {
+                  <div class="confirm" role="dialog" aria-label="Demo opnieuw bevestigen">
+                    <span>Terug naar de start, met een lege log?</span>
+                    <label
+                      ><input
+                        type="checkbox"
+                        [checked]="saveFirst()"
+                        (change)="saveFirst.set($any($event.target).checked)"
+                      />
+                      eerst de run en het rapport bewaren</label
+                    >
+                    <span class="row">
+                      <button
+                        type="button"
+                        class="btn"
+                        data-command="demo-reset-confirm"
+                        (click)="reset()"
+                      >
+                        Ja, opnieuw
+                      </button>
+                      <button type="button" class="btn" (click)="confirmReset.set(false)">
+                        Nee
+                      </button>
+                    </span>
+                  </div>
+                }
               }
-            </span>
+            </div>
           }
         </div>
       }
     }
   `,
   styles: `
-    .demo-controls {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-    /* The confirmation opens under the button, over the page: nothing moves. */
-    .anchor {
+    .menu {
       position: relative;
     }
-    .confirm {
-      position: absolute;
-      top: calc(100% + 6px);
-      right: 0;
-      z-index: 20;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-      padding: 8px;
-      border: 1px solid var(--red);
-      border-radius: 8px;
-      background: var(--card);
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-    }
-    /* Every button in the header has the same size and letter (also the choice of the demo, in app.css). */
+    /* Businesslike and quiet: the same neutral look as the choice of the demo round (app.css). */
     .btn {
       font: inherit;
       font-size: 0.85rem;
@@ -108,39 +110,87 @@ import { LiveStore } from './live-store';
       background: var(--card);
       color: var(--text);
       cursor: pointer;
+      text-align: left;
+    }
+    .row .btn {
+      width: auto;
+      text-align: center;
+    }
+    /* The menu opens over the page: nothing moves. */
+    .items {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      z-index: 20;
+      min-width: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+    }
+    .item {
+      font: inherit;
+      font-size: 0.85rem;
+      text-align: left;
+      padding: 7px 10px;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
-    .confirm .btn {
-      width: 7.5em;
+    .item:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--line) 60%, transparent);
     }
-    .btn.primary {
-      background: var(--green);
-      border-color: var(--green);
-      color: #fff;
-    }
-    .btn.danger {
-      background: var(--red);
-      border-color: var(--red);
-      color: #fff;
-    }
+    .item:disabled,
     .btn:disabled {
       opacity: 0.45;
       cursor: not-allowed;
     }
-    .confirm label {
+    .confirm {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 6px 8px;
       font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    .confirm .row {
+      display: flex;
+      gap: 6px;
     }
   `,
 })
 export class DemoControls {
   protected readonly store = inject(LiveStore);
+  protected readonly open = signal(false);
   protected readonly confirmReset = signal(false);
   protected readonly saveFirst = signal(true);
 
-  protected reset(): void {
+  protected toggle(e: Event): void {
+    e.stopPropagation();
+    this.open.update((v) => !v);
     this.confirmReset.set(false);
+  }
+
+  /** A click anywhere else closes the menu. */
+  @HostListener('document:click')
+  protected close(): void {
+    this.open.set(false);
+    this.confirmReset.set(false);
+  }
+
+  protected run(kind: 'start-run' | 'demo-merge'): void {
+    this.close();
+    this.store.send(kind);
+  }
+
+  protected reset(): void {
+    this.close();
     this.store.send('demo-reset', { save: this.saveFirst() });
   }
 }

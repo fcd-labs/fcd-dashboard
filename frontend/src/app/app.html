@@ -24,6 +24,9 @@
   <app-live [experiment]="experiment()" [presentation]="true" />
 } @else {
   <nav class="tabs" role="tablist">
+    <button role="tab" [attr.aria-selected]="tab() === 'home'" (click)="tab.set('home')">
+      Home
+    </button>
     <button role="tab" [attr.aria-selected]="tab() === 'live'" (click)="tab.set('live')">
       Live
     </button>
@@ -57,11 +60,46 @@
   }
 
   <main [class.live-tab]="tab() === 'live'">
+    @if (tab() === 'home') {
+      <section class="home">
+        <h2>Showcase {{ overview()?.showcase || '…' }}: de cirkel rond</h2>
+        <p class="lead">
+          Dit Dashboard volgt de levering van het product van deze showcase: van een wijziging, via
+          de pipeline en de quality gates, naar uitrol, release en meting. Een mens geeft de
+          goedkeuring. Alles wat je hier ziet komt uit de logregels van de Pipeline en van het
+          product zelf.
+        </p>
+        @if (overview(); as o) {
+          @for (p of o.products; track p.name) {
+            <p class="now" [attr.data-product]="p.name">
+              <span class="dot" [attr.data-status]="p.status"></span>
+              <strong>{{ p.name }}</strong>
+              @for (s of p.subProducts; track s.name) {
+                · {{ s.name }} {{ s.deployed?.version ?? 'nog niet uitgerold' }}
+              }
+            </p>
+          }
+        }
+        <div class="cards">
+          @for (item of homeItems; track item.tab) {
+            <button
+              type="button"
+              class="card"
+              [attr.data-tab]="item.tab"
+              (click)="tab.set(item.tab)"
+            >
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.text }}</span>
+            </button>
+          }
+        </div>
+      </section>
+    }
     @if (tab() === 'live') {
       <app-live [experiment]="experiment()" />
     }
     @if (overview(); as o) {
-      @if (o.products.length === 0 && tab() !== 'live') {
+      @if (o.products.length === 0 && tab() !== 'live' && tab() !== 'home') {
         <p class="empty">
           Nog geen logregels in experiment {{ o.experiment }}. Start een pipeline met
           <code>fcd ci</code>.

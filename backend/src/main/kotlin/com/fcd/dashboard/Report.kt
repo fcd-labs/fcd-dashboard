@@ -155,7 +155,7 @@ class Report(
                 "build" to "bouwgate",
                 "security" to "securitygate",
                 "deploy" to "uitrolgate",
-                "human" to "mensgate",
+                "human" to "goedkeuring",
             )
 
         private fun status(s: String) = mapOf("green" to "groen", "red" to "rood", "running" to "bezig").getOrDefault(s, "onbekend")
