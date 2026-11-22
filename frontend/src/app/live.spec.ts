@@ -339,9 +339,9 @@ describe('Live', () => {
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('A pipeline is running.');
   });
 
-  it('a container that stays the same is skipped, and counts as built for the row of the sub-product', () => {
+  it('a container that stays the same is already green, and counts as built for the row of the sub-product', () => {
     create();
-    const row = (container: string, status: 'skipped' | 'succeeded') => ({
+    const row = (container: string, status: 'unchanged' | 'succeeded') => ({
       container,
       title: container,
       version: '1.0.0',
@@ -353,16 +353,16 @@ describe('Live', () => {
           status,
           explains: [],
           container,
-          reason: status === 'skipped' ? container + ' 1.0.0 ongewijzigd (draait al)' : undefined,
+          reason: status === 'unchanged' ? container + ' 1.0.0 ongewijzigd (draait al)' : undefined,
         },
       ],
     });
     push([
-      { ...running, containerRows: [row('frontend', 'skipped'), row('backend', 'succeeded')] },
+      { ...running, containerRows: [row('frontend', 'unchanged'), row('backend', 'succeeded')] },
     ]);
     expect(el.querySelector('.join')?.getAttribute('data-status')).toBe('succeeded');
     const skipped = el.querySelector('.row[data-container="frontend"] .stop')!;
-    expect(flat(skipped.textContent)).toContain('overgeslagen');
+    expect(flat(skipped.textContent)).toContain('al groen');
     expect(skipped.getAttribute('title')).toBe('frontend 1.0.0 ongewijzigd (draait al)');
   });
 

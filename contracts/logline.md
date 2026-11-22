@@ -56,6 +56,8 @@ Per stap en per gate een logregel bij het begin en bij het einde, zodat het Dash
 
 ## Stappen per container
 
+Een container met dezelfde versie en dezelfde code als wat draait, slaat zijn stappen over: `taskrun.finished` met `outcome` `skipped` en `unchanged: true`. Het Dashboard toont zo'n stap groen ("al groen"): hij was bij die versie al gelukt.
+
 Een stap met `level: container` in de configuratie (statische controle, unittests, contracttest, bouwen) draait per container van het deelproduct. Dan staat de container in `subject.content.container` van `taskrun.started`, `taskrun.finished` en de testlogregels. Zonder `container` geldt de stap voor het hele deelproduct. Zo laat het Dashboard per container een eigen rij zien.
 
 ## Voorbeeld: de mensgate wacht

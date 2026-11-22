@@ -20,6 +20,7 @@ const stepText: Record<string, string> = {
   succeeded: 'gelukt',
   failed: 'mislukt',
   explained: 'met afwijking',
+  unchanged: 'al groen',
   skipped: 'overgeslagen',
   'not-run': 'niet uitgevoerd',
   backlog: 'backlog',
@@ -55,6 +56,7 @@ const marker: Record<string, string> = {
   succeeded: '✔',
   failed: '✖',
   explained: '!',
+  unchanged: '✔',
   skipped: '⤼',
   'not-run': '–',
   backlog: '·',
@@ -149,7 +151,12 @@ export class Live implements OnInit {
     const st = built.map((i) => i?.status ?? 'waiting');
     if (st.some((x) => x === 'failed')) return 'failed';
     // A container that stays the same skips its steps: that counts as built.
-    if (st.length && st.every((x) => x === 'succeeded' || x === 'explained' || x === 'skipped'))
+    if (
+      st.length &&
+      st.every(
+        (x) => x === 'succeeded' || x === 'explained' || x === 'unchanged' || x === 'skipped',
+      )
+    )
       return 'succeeded';
     if (st.some((x) => x === 'running' || x === 'succeeded')) return 'running';
     return r.outcome === 'running' ? 'waiting' : 'not-run';

@@ -188,6 +188,23 @@ class DemoTest {
     }
 
     @Test
+    fun `a container that did not change is already green, not just skipped`() {
+        val lines =
+            arrayOf(
+                line("dev.cdevents.pipelinerun.started.0.2.0", """{"pipelineName":"shop","outcome":"running"}"""),
+                task("started", "lint", "orders-frontend"),
+                line(
+                    "dev.cdevents.taskrun.finished.0.2.0",
+                    """{"taskName":"lint","outcome":"skipped","reason":"orders-frontend 1.0.0 ongewijzigd (draait al)","container":"orders-frontend","unchanged":true}""",
+                ),
+            )
+        val r = LiveViews(store(*lines), Views(InMemoryEventStore(), "sim", "demo"), config).state("sim").runs.single()
+        val lint = r.containerRows[0].items[0]
+        assertEquals("unchanged", lint.status)
+        assertEquals("orders-frontend 1.0.0 ongewijzigd (draait al)", lint.reason)
+    }
+
+    @Test
     fun `a step that its gate let through with an approved explain is explained, not failed`() {
         val lines =
             arrayOf(

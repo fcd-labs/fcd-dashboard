@@ -882,3 +882,16 @@
   border-color: var(--amber);
   color: var(--text);
 }
+
+/* Unchanged container: skipped, but already green at that version. */
+[data-status='unchanged'] .mark {
+  border-color: var(--green);
+  color: var(--green);
+  border-style: dashed;
+}
+[data-status='unchanged']::before {
+  background: var(--green);
+}
+[data-status='unchanged'] .state {
+  color: var(--green);
+}

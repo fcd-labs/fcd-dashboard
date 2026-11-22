@@ -10,7 +10,8 @@
     <select
       class="experiment"
       (change)="chooseExperiment($any($event.target).value)"
-      aria-label="Demo kiezen"
+      aria-label="Demoronde kiezen"
+      title="Elke keer Demo opnieuw begint een nieuwe demoronde met een lege log; hier kies je een eerdere ronde om terug te kijken"
     >
       @for (e of o.experiments; track e) {
         <option [value]="e" [selected]="e === o.experiment">{{ experimentLabel(e) }}</option>

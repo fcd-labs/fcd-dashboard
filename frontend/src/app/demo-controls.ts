@@ -31,49 +31,68 @@ import { LiveStore } from './live-store';
               ⇄ Patch mergen
             </button>
           } @else if (s.controls.demoReset) {
-            @if (!confirmReset()) {
+            <span class="anchor">
               <button
                 type="button"
                 class="btn"
                 data-command="demo-reset"
                 [disabled]="store.running() || !!store.busy()"
-                (click)="confirmReset.set(true)"
+                (click)="confirmReset.set(!confirmReset())"
               >
                 ↺ Demo opnieuw
               </button>
-            } @else {
-              <span class="confirm" role="dialog" aria-label="Demo opnieuw bevestigen">
-                <label
-                  ><input
-                    type="checkbox"
-                    [checked]="saveFirst()"
-                    (change)="saveFirst.set($any($event.target).checked)"
-                  />
-                  eerst bewaren</label
-                >
-                <button
-                  type="button"
-                  class="btn danger"
-                  data-command="demo-reset-confirm"
-                  (click)="reset()"
-                >
-                  Ja, opnieuw
-                </button>
-                <button type="button" class="btn" (click)="confirmReset.set(false)">Nee</button>
-              </span>
-            }
+              @if (confirmReset()) {
+                <span class="confirm" role="dialog" aria-label="Demo opnieuw bevestigen">
+                  <label
+                    ><input
+                      type="checkbox"
+                      [checked]="saveFirst()"
+                      (change)="saveFirst.set($any($event.target).checked)"
+                    />
+                    eerst bewaren</label
+                  >
+                  <button
+                    type="button"
+                    class="btn danger"
+                    data-command="demo-reset-confirm"
+                    (click)="reset()"
+                  >
+                    Ja, opnieuw
+                  </button>
+                  <button type="button" class="btn" (click)="confirmReset.set(false)">Nee</button>
+                </span>
+              }
+            </span>
           }
         </div>
       }
     }
   `,
   styles: `
-    .demo-controls,
-    .confirm {
+    .demo-controls {
       display: flex;
       align-items: center;
       gap: 6px;
       white-space: nowrap;
+    }
+    /* The confirmation opens under the button, over the page: nothing moves. */
+    .anchor {
+      position: relative;
+    }
+    .confirm {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      padding: 8px;
+      border: 1px solid var(--red);
+      border-radius: 8px;
+      background: var(--card);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
     }
     /* Every button in the header has the same size and letter (also the choice of the demo, in app.css). */
     .btn {

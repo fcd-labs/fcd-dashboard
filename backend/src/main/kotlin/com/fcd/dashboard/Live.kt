@@ -344,6 +344,8 @@ class LiveViews(
         var reason: String? = null,
         var excerpt: String? = null,
         var tests: LiveTests? = null,
+        /** Skipped because its container did not change: already green at that version. */
+        var unchanged: Boolean = false,
     )
 
     private class GateState(
@@ -458,6 +460,7 @@ class LiveViews(
                         s.seconds = line.custom.path("durationSeconds").asDouble()
                         s.reason = c.text("reason")
                         s.excerpt = c.text("excerpt")?.let(::oneLine)
+                        s.unchanged = c.path("unchanged").asBoolean(false)
                         if (s.startedAt == null) s.startedAt = line.timestamp
                     }
                     if (container == null || config.step(s.name)?.perContainer != true) lastStep = s.name
@@ -536,6 +539,7 @@ class LiveViews(
                 status =
                     when {
                         cfg?.backlog == true -> "backlog"
+                        s.finished && s.unchanged -> "unchanged"
                         s.finished -> s.outcome ?: "succeeded"
                         s.startedAt != null && running -> "running"
                         running -> "waiting"

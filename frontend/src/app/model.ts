@@ -205,6 +205,7 @@ export type LiveStatus =
   | 'succeeded'
   | 'failed'
   | 'explained'
+  | 'unchanged'
   | 'skipped'
   | 'not-run'
   | 'backlog'
