@@ -7,7 +7,7 @@ info:
     identifier: MIT
   description: |
     Contract between the Pipeline (fcd-pipeline) and the products of a showcase (such as the key-result
-    measurement of sk-demo) on one side, and the Dashboard of that showcase (fcd-dashboard) on the other. The Dashboard receives log lines.
+    measurement of sk-bestellen) on one side, and the Dashboard of that showcase (fcd-dashboard) on the other. The Dashboard receives log lines.
     A log line is a CDEvent; the FCD fields are in customData. See logline.md.
 servers:
   - url: http://127.0.0.1:8070
