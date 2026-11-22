@@ -7,8 +7,8 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 ## [0.5.0] - 2026-11-21
 
 ### Toegevoegd
-- Knoppen van de product owner (alleen als de configuratie ze aanzet): **Pipeline starten** (mensgate bij de start, `Pipeline.spec.trigger: dashboard-button`), **Release goedkeuren** bij een wachtende mensgate, en **Demo opnieuw** met bevestiging (demomodus, `Pipeline.spec.demo`), met de keuze om eerst de run en het statusrapport te bewaren. Het Dashboard bewaart de knop als commando; de Pipeline-agent haalt het op en voert het uit (`/api/v1/commands`). Het Dashboard draait zelf nooit een pipeline.
-- Live weergave: per container een eigen rij met de stappen van niveau container (tot en met bouwen); daaronder de rij van het deelproduct. Stappen uit de backlog grijs; voor de demo ingekorte stappen gemarkeerd met hun afwijking. Een gate vóór meer dan één stap (de mensgate bij de start en vóór het releasen) staat op elke plek.
+- Knoppen van de product owner (alleen als de configuratie ze aanzet): **Pipeline starten** (goedkeuring bij de start, `Pipeline.spec.trigger: dashboard-button`), **Release goedkeuren** bij een wachtende goedkeuring, en **Demo opnieuw** met bevestiging (demomodus, `Pipeline.spec.demo`), met de keuze om eerst de run en het statusrapport te bewaren. Het Dashboard bewaart de knop als commando; de Pipeline-agent haalt het op en voert het uit (`/api/v1/commands`). Het Dashboard draait zelf nooit een pipeline.
+- Live weergave: per container een eigen rij met de stappen van niveau container (tot en met bouwen); daaronder de rij van het deelproduct. Stappen uit de backlog grijs; voor de demo ingekorte stappen gemarkeerd met hun afwijking. Een gate vóór meer dan één stap (de goedkeuring bij de start en vóór het releasen) staat op elke plek.
 - Het key result bovenaan de live weergave: per ontvanger of de laatste bestelling aankwam, met "stub" erbij als een stub de ontvanger vervangt (configuratie: `Container.spec.stub` en `spec.receiver`).
 - Eén knop voor de demo: na "Demo opnieuw" wordt hij **Patch mergen** (zolang een klaarstaande wijziging niet gemerged is), na de merge (knop of terminal) weer **Demo opnieuw**. Afgeleid uit de logregels `fcd-demo.reset` en `fcd-demo.merged`.
 - **Draait nu**: per deelproduct de versie die het laatst is uitgerold, met de containerversies.
@@ -27,11 +27,11 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 ## [0.4.0] - 2026-11-21
 
 ### Toegevoegd
-- Live weergave van de pipeline (tabblad Live): per deelproduct de lopende run met de CI-stappen en quality gates op een rij, in de volgorde uit de configuratie van de showcase; per stap de status met lopende tijd, per gate open of dicht met de reden, meelopende testtellers, een regel uit de uitvoer bij een mislukte stap, de wachtende mensgate, en na afloop de uitkomst, de versie en een link naar de run.
+- Live weergave van de pipeline (tabblad Live): per deelproduct de lopende run met de CI-stappen en quality gates op een rij, in de volgorde uit de configuratie van de showcase; per stap de status met lopende tijd, per gate open of dicht met de reden, meelopende testtellers, een regel uit de uitvoer bij een mislukte stap, de wachtende goedkeuring, en na afloop de uitkomst, de versie en een link naar de run.
 - Presentatiemodus voor een groot scherm (`?presentatie` of toets `P`), ingesteld vanuit de configuratie.
 - Server-Sent Events: `GET /api/v1/live` duwt elke nieuwe logregel direct naar de browser; `GET /api/v1/live/state` geeft de stand als JSON.
 - Het Dashboard leest de configuratie van de showcase alleen-lezen (`FCD_CONFIG_DIR`): stappen, gates en `Dashboard.spec.live`.
-- Simulator (`java -jar app.jar simulate`): voorbeeld-logregels met echte tussentijden, scenario's voor een geslaagde run, een dichte codegate of securitygate, een noodpatch, een wachtende mensgate, twee deelproducten tegelijk en het opnieuw afspelen van een echte run. De logregels gaan naar experiment `test-sim`, dat nooit de standaardweergave wordt.
+- Simulator (`java -jar app.jar simulate`): voorbeeld-logregels met echte tussentijden, scenario's voor een geslaagde run, een dichte codegate of securitygate, een noodpatch, een wachtende goedkeuring, twee deelproducten tegelijk en het opnieuw afspelen van een echte run. De logregels gaan naar experiment `test-sim`, dat nooit de standaardweergave wordt.
 
 ### Gewijzigd
 - Contract van de logregel 0.4.0: begin en einde per stap en per gate. Nieuw: `fcd-qualitygate.started` (met `waitingFor`), `testsuiterun.started`, `fcd-testsuiterun.progressed`; optioneel `excerpt` bij `taskrun.finished` en `steps` bij `pipelinerun.started`. Achterwaarts compatibel.
@@ -63,7 +63,7 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 ### Opgelost
 - Key result: bestellingen van end-to-end tests telden mee; nu tellen alleen echte gasten (contract van de logregel 0.2.0, `trigger.kind` `test`).
 - Statusrapport: een deelproduct zonder containers (de Pipeline) heet "n.v.t." in plaats van "nog niet uitgerold".
-- De versheidscontrole voor Maven zag niets (door `-q`); nu met een reden per onderdeel. Gevonden: json-schema-validator een major-versie achter; afwijking EXP-002 tot 2026-12-31 (goedgekeurd door Johannes). EXP-001 geldt alleen nog voor de frontend.
+- De versheidscontrole voor Maven zag niets (door `-q`); nu met een reden per onderdeel. Gevonden: json-schema-validator een major-versie achter; afwijking EXP-002 tot 2026-12-31 (goedgekeurd door sim007). EXP-001 geldt alleen nog voor de frontend.
 
 ## [0.2.0] - 2026-11-20
 

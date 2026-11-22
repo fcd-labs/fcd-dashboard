@@ -69,8 +69,8 @@ class DemoTest {
             spec: {afterSteps: [lint, unit-tests]}
             ---
             kind: QualityGate
-            metadata: {name: human, title: Mensgate}
-            spec: {beforeSteps: [lint, release], approval: dashboard-button, approver: Johannes}
+            metadata: {name: human, title: Goedkeuring}
+            spec: {beforeSteps: [lint, release], approval: dashboard-button, approver: sim007}
             ---
             kind: Explanation
             metadata: {name: EXP-9}
@@ -106,7 +106,7 @@ class DemoTest {
         {"context":{"version":"0.4.1","id":"${UUID.randomUUID()}","source":"fcd-pipeline/0.7.0","type":"$type",
           "timestamp":"${Instant.parse("2026-11-25T10:00:00Z").plusSeconds(second++)}"},
          "subject":{"id":"x","source":"shop","content":$content},
-         "customData":{"durationSeconds":1,"run":"$runId","trigger":{"kind":"human","name":"Johannes"},"product":"shop",
+         "customData":{"durationSeconds":1,"run":"$runId","trigger":{"kind":"human","name":"sim007"},"product":"shop",
           "subProduct":{"name":"orders","version":"1.0.1","containers":{"orders-frontend":"1.0.0","orders-backend":"1.0.1"}},
           "showcase":"demo","experiment":"sim","environment":"lokaal","releaseType":"planned"}}
         """.trimIndent()
@@ -133,7 +133,7 @@ class DemoTest {
         buildString {
             append("""{"gate":"$name"""")
             before?.let { append(""","beforeSteps":"$it"""") }
-            if (waiting) append(""","waitingFor":{"kind":"human","name":"Johannes","action":"release goedkeuren"}""")
+            if (waiting) append(""","waitingFor":{"kind":"human","name":"sim007","action":"release goedkeuren"}""")
             if (phase != "started") append(""","outcome":"open","reason":"ok","explain":""""")
             append("}")
         },
@@ -179,7 +179,7 @@ class DemoTest {
             r.items.map { "${it.kind}:${it.name}" },
         )
         assertEquals("waiting", r.items[4].status)
-        assertEquals("Johannes", r.waitingFor?.name)
+        assertEquals("sim007", r.waitingFor?.name)
         assertEquals("backlog", r.items[2].status)
         assertEquals("EXP-9", r.items[1].shortened?.explain)
         assertEquals("Alleen het kernpad in de demo", r.items[1].shortened?.reason)
@@ -277,7 +277,7 @@ class DemoTest {
         assertEquals("This run does not wait for an approval.", live.refusal(CommandRequest(CommandKinds.APPROVE_RELEASE, run = "other")))
         assertNull(live.refusal(CommandRequest(CommandKinds.APPROVE_RELEASE, run = run)))
 
-        commands.add(Command(UUID.randomUUID().toString(), CommandKinds.APPROVE_RELEASE, run, null, "Johannes", Instant.now()))
+        commands.add(Command(UUID.randomUUID().toString(), CommandKinds.APPROVE_RELEASE, run, null, "sim007", Instant.now()))
         assertEquals("Already approved; the Pipeline is on it.", live.refusal(CommandRequest(CommandKinds.APPROVE_RELEASE, run = run)))
         assertNull(commands.claim(setOf(CommandKinds.START_RUN, CommandKinds.DEMO_RESET), null))
         assertNull(commands.claim(setOf(CommandKinds.APPROVE_RELEASE), "other"))
@@ -300,7 +300,7 @@ class DemoTest {
                     setBody("""{"kind":"start-run"}""")
                 }
             assertEquals(HttpStatusCode.Accepted, created.status)
-            assertTrue(created.bodyAsText().contains("\"requestedBy\":\"Johannes\""))
+            assertTrue(created.bodyAsText().contains("\"requestedBy\":\"sim007\""))
             val again =
                 client.post("/api/v1/commands") {
                     contentType(ContentType.Application.Json)

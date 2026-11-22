@@ -46,7 +46,7 @@ const overview: Overview = {
               id: 'EXP-001',
               gate: 'security',
               until: '2026-12-31',
-              approver: 'Johannes',
+              approver: 'sim007',
               lastUsed: '2026-11-20T16:00:00Z',
             },
           ],
@@ -58,7 +58,7 @@ const overview: Overview = {
             version: '0.2.0',
             environment: 'lokaal',
             triggerKind: 'human',
-            triggerName: 'Johannes',
+            triggerName: 'sim007',
             releaseType: 'planned',
             commit: 'abc1234',
             started: '2026-11-20T17:00:00Z',
@@ -100,7 +100,7 @@ const loglines: LoglineRow[] = [
     time: '2026-11-20T17:02:00Z',
     seconds: 0,
     triggerKind: 'human',
-    triggerName: 'Johannes',
+    triggerName: 'sim007',
     product: 'showkitchen',
     subProduct: 'bestellen',
     version: '0.2.0',
@@ -359,7 +359,7 @@ describe('App (dashboard)', () => {
     flushAll();
     openTab('Logregels');
     const row = el.querySelector('.loglines tbody tr')?.textContent?.replace(/\s+/g, ' ');
-    expect(row).toContain('Johannes (mens)');
+    expect(row).toContain('sim007 (mens)');
     expect(row).toContain('bestellen 0.2.0');
     expect(row).toContain('security-gate');
     expect(row).toContain('dicht');

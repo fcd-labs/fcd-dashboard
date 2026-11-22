@@ -50,9 +50,9 @@ Per stap en per gate een logregel bij het begin en bij het einde, zodat het Dash
 | Testsoort | `testsuiterun.started`, daarna `fcd-testsuiterun.progressed` | `testsuiterun.finished` |
 | Quality gate | `fcd-qualitygate.started` | `fcd-qualitygate.evaluated` |
 
-- **Mensgate:** wacht de gate op een mens, dan staat dat in `waitingFor` van `fcd-qualitygate.started`. Bij de goedkeuring "merge op main" stuurt de werkplek-run die logregel als alle automatische gates open zijn; de gate wacht tot er een lokale run is.
+- **Goedkeuring:** wacht de gate op een mens, dan staat dat in `waitingFor` van `fcd-qualitygate.started`. Bij de goedkeuring "merge op main" stuurt de werkplek-run die logregel als alle automatische gates open zijn; de gate wacht tot er een lokale run is.
 - **`excerpt`:** één regel uit de uitvoer van een mislukte stap, hoogstens 300 tekens, zonder regeleinden. De afzender maskeert geheimen; het Dashboard toont hem als tekst, nooit als HTML.
-- **Achterwaarts compatibel:** een Dashboard met 0.4.0 leest logregels van 0.3.x. Zonder de nieuwe logregels toont het Dashboard minder (geen tussenstand, geen wachtende mensgate). Stuur de nieuwe soorten pas naar een Dashboard dat 0.4.0 kent: een ouder Dashboard weigert ze.
+- **Achterwaarts compatibel:** een Dashboard met 0.4.0 leest logregels van 0.3.x. Zonder de nieuwe logregels toont het Dashboard minder (geen tussenstand, geen wachtende goedkeuring). Stuur de nieuwe soorten pas naar een Dashboard dat 0.4.0 kent: een ouder Dashboard weigert ze.
 
 ## Stappen per container
 
@@ -60,7 +60,7 @@ Een container met dezelfde versie en dezelfde code als wat draait, slaat zijn st
 
 Een stap met `level: container` in de configuratie (statische controle, unittests, contracttest, bouwen) draait per container van het deelproduct. Dan staat de container in `subject.content.container` van `taskrun.started`, `taskrun.finished` en de testlogregels. Zonder `container` geldt de stap voor het hele deelproduct. Zo laat het Dashboard per container een eigen rij zien.
 
-## Voorbeeld: de mensgate wacht
+## Voorbeeld: de goedkeuring wacht
 
 ```json
 {
@@ -68,7 +68,7 @@ Een stap met `level: container` in de configuratie (statische controle, unittest
                "type": "dev.cdeventsx.fcd-qualitygate.started.0.1.0", "timestamp": "2026-11-26T09:16:40Z" },
   "subject": { "id": "human-gate", "source": "sk-demo",
                "content": { "gate": "human", "beforeSteps": "release",
-                            "waitingFor": { "kind": "human", "name": "Johannes", "action": "merge op main met een hogere versie" } } },
+                            "waitingFor": { "kind": "human", "name": "sim007", "action": "merge op main met een hogere versie" } } },
   "customData": { "durationSeconds": 0, "run": "sk-demo-20261126-091203-a1b2c3d",
                   "commit": { "sha": "a1b2c3d", "time": "2026-11-26T09:10:44Z" },
                   "trigger": { "kind": "ai-agent", "name": "Claude Code" }, "product": "showkitchen",
@@ -117,7 +117,7 @@ Een stap met `level: container` in de configuratie (statische controle, unittest
     "durationSeconds": 0,
     "run": "sk-demo-20261126-091203-a1b2c3d",
     "commit": { "sha": "a1b2c3d", "time": "2026-11-26T09:10:44Z" },
-    "trigger": { "kind": "human", "name": "Johannes Sim" },
+    "trigger": { "kind": "human", "name": "sim007" },
     "product": "showkitchen",
     "subProduct": { "name": "bestellen", "version": "0.2.1",
                     "containers": { "bestellen-frontend": "0.2.1", "bestellen-backend": "0.2.0" } },

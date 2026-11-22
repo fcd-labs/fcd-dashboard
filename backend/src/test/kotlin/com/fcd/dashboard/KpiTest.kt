@@ -36,7 +36,7 @@ class KpiTest {
         environment: String = "lokaal",
         releaseType: String = "planned",
         run: String = "run-$version-$environment",
-        trigger: String = """{"kind":"human","name":"Johannes"}""",
+        trigger: String = """{"kind":"human","name":"sim007"}""",
     ) = """{"context":{"version":"0.4.1","id":"${UUID.randomUUID()}","source":"test","type":"$type","timestamp":"${t(at)}"},
         "subject":{"id":"x","source":"sk-demo","content":$content},
         "customData":{"durationSeconds":60,"run":"$run","commit":{"sha":"abc","time":"${t(commit)}"},

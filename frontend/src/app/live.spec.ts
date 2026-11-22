@@ -143,7 +143,7 @@ const waiting: LiveRun = {
     {
       kind: 'gate',
       name: 'human',
-      title: 'Mensgate',
+      title: 'Goedkeuring',
       status: 'waiting',
       explains: [],
       waitingFor: { kind: 'human', name: 'Pat' },
@@ -229,7 +229,7 @@ describe('Live', () => {
     return controls.nativeElement;
   }
 
-  const demo: Controls = { startButton: true, demoReset: true, approver: 'Johannes' };
+  const demo: Controls = { startButton: true, demoReset: true, approver: 'sim007' };
 
   const stubs = [
     { name: 'stub-keuken', title: 'keuken', receiver: 'kitchen', version: '1.0.0' },
@@ -271,7 +271,7 @@ describe('Live', () => {
     stream.onState(state([], demo));
     fixture.detectChanges();
     const start = buttons().querySelector<HTMLButtonElement>('[data-command="start-run"]')!;
-    expect(flat(start.textContent)).toBe('Pipeline starten (Johannes)');
+    expect(flat(start.textContent)).toBe('Pipeline starten (sim007)');
     start.click();
     expect(api.sent).toEqual([{ kind: 'start-run', extra: {} }]);
 
@@ -287,7 +287,7 @@ describe('Live', () => {
 
   it('a waiting human gate has a button to approve the release of that run', () => {
     create();
-    const waiting = { kind: 'human', name: 'Johannes', action: 'release goedkeuren' };
+    const waiting = { kind: 'human', name: 'sim007', action: 'release goedkeuren' };
     stream.onState(state([{ ...running, waitingFor: waiting }], demo));
     fixture.detectChanges();
     el.querySelector<HTMLButtonElement>('[data-command="approve-release"]')!.click();
@@ -330,14 +330,14 @@ describe('Live', () => {
     const c: Command = {
       id: '1',
       kind: 'start-run',
-      requestedBy: 'Johannes',
+      requestedBy: 'sim007',
       requestedAt: now.toISOString(),
       status: 'claimed',
     };
     stream.onState(state([], demo, [c]));
     fixture.detectChanges();
     expect(flat(el.querySelector('.messages .msg[data-kind="info"]')?.textContent)).toBe(
-      '⏳ Pipeline starten (Johannes): de Pipeline is bezig',
+      '⏳ Pipeline starten (sim007): de Pipeline is bezig',
     );
     api.refuse = 'A pipeline is running.';
     stream.onState(state([], demo, [{ ...c, status: 'done', message: 'bestellen: gelukt' }]));
@@ -379,11 +379,11 @@ describe('Live', () => {
     const older: Command = {
       id: '1',
       kind: 'demo-merge',
-      requestedBy: 'Johannes',
+      requestedBy: 'sim007',
       requestedAt: '2026-11-26T09:00:00Z',
       status: 'done',
     };
-    const waiting = { kind: 'human', name: 'Johannes', action: 'release goedkeuren' };
+    const waiting = { kind: 'human', name: 'sim007', action: 'release goedkeuren' };
     stream.onState(state([{ ...running, waitingFor: waiting }], demo, [older]));
     fixture.detectChanges();
     const kinds = Array.from(el.querySelectorAll('.messages .msg')).map((m) =>

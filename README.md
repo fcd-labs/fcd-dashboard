@@ -17,7 +17,7 @@ Elk experiment (zoals `mvp0`) heeft een eigen, lege log; eerdere experimenten bl
 
 ## Live weergave
 
-Tabblad **Live**: per deelproduct de run die nu loopt, met de CI-stappen en quality gates op een rij, in de volgorde uit de configuratie van de showcase. Per stap wachtend, bezig (met lopende tijd), gelukt, mislukt of overgeslagen; per gate open of dicht met de reden; tellers bij testen; bij een mislukte stap een regel uit de uitvoer; bij de mensgate op wie de pipeline wacht; na afloop de uitkomst, de versie en een link naar de run.
+Tabblad **Live**: per deelproduct de run die nu loopt, met de CI-stappen en quality gates op een rij, in de volgorde uit de configuratie van de showcase. Per stap wachtend, bezig (met lopende tijd), gelukt, mislukt of overgeslagen; per gate open of dicht met de reden; tellers bij testen; bij een mislukte stap een regel uit de uitvoer; bij de goedkeuring op wie de pipeline wacht; na afloop de uitkomst, de versie en een link naar de run.
 
 - **Push:** Server-Sent Events (`GET /api/v1/live`). De browser verbindt zelf opnieuw; geen verversen.
 - **Presentatiemodus:** `/?presentatie` of toets `P` op het tabblad Live (`Esc`: terug). Titel, thema, lettergrootte en volgorde uit de configuratie.
@@ -42,7 +42,7 @@ Voorbeeld-logregels met echte tussentijden, zodat de live weergave ook zonder de
 
 ```bash
 docker run --rm --network demo-dashboard_default -v "$PWD/../fcd-demo/fcd:/config:ro" \
-  fcd/dashboard-backend:0.4.0 simulate --scenario codegate-dicht --speed 2 --approver Johannes
+  fcd/dashboard-backend:0.4.0 simulate --scenario codegate-dicht --speed 2 --approver sim007
 ```
 
 Scenario's: `gelukt`, `codegate-dicht`, `securitygate-dicht`, `noodpatch`, `wacht-op-mens`, `parallel` (twee deelproducten tegelijk) en `replay --file <log.jsonl> [--run <id>]` (een echte run opnieuw afspelen; mount de map met de log). Daarna: `http://127.0.0.1:8070/?tab=live&experiment=test-sim`. Alle opties: `simulate --help`.

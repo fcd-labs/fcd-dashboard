@@ -64,7 +64,7 @@ spec: {afterSteps: [deploy]}
 ---
 apiVersion: fcd/v0
 kind: QualityGate
-metadata: {name: human, title: Mensgate}
+metadata: {name: human, title: Goedkeuring}
 spec: {beforeSteps: [release]}
 ---
 apiVersion: fcd/v0
