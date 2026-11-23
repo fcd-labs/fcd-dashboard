@@ -47,14 +47,16 @@ import { LiveStore } from './live-store';
                 >
                   Patch mergen
                 </button>
-              } @else if (s.controls.demoReset) {
+              }
+              <!-- Demo opnieuw always works, in every phase (besluit sim007). -->
+              @if (s.controls.demoReset) {
                 @if (!confirmReset()) {
                   <button
                     type="button"
                     role="menuitem"
                     class="item"
                     data-command="demo-reset"
-                    [disabled]="store.running() || !!store.busy()"
+                    [disabled]="!store.resettable()"
                     (click)="confirmReset.set(true)"
                   >
                     Demo opnieuw…

@@ -273,12 +273,14 @@ class DemoTest {
         val live = LiveViews(store(*waitingRun()), Views(InMemoryEventStore(), "sim", "demo"), config, commands)
 
         assertEquals("A pipeline is running.", live.refusal(CommandRequest(CommandKinds.START_RUN)))
-        assertEquals("A pipeline is running; reset after it.", live.refusal(CommandRequest(CommandKinds.DEMO_RESET)))
+        // Demo opnieuw always works: the Pipeline stops the run.
+        assertNull(live.refusal(CommandRequest(CommandKinds.DEMO_RESET)))
         assertEquals("This run does not wait for an approval.", live.refusal(CommandRequest(CommandKinds.APPROVE_RELEASE, run = "other")))
         assertNull(live.refusal(CommandRequest(CommandKinds.APPROVE_RELEASE, run = run)))
 
         commands.add(Command(UUID.randomUUID().toString(), CommandKinds.APPROVE_RELEASE, run, null, "sim007", Instant.now()))
         assertEquals("Already approved; the Pipeline is on it.", live.refusal(CommandRequest(CommandKinds.APPROVE_RELEASE, run = run)))
+        assertNull(live.refusal(CommandRequest(CommandKinds.DEMO_RESET)))
         assertNull(commands.claim(setOf(CommandKinds.START_RUN, CommandKinds.DEMO_RESET), null))
         assertNull(commands.claim(setOf(CommandKinds.APPROVE_RELEASE), "other"))
         val claimed = assertNotNull(commands.claim(setOf(CommandKinds.APPROVE_RELEASE), run))
@@ -286,6 +288,8 @@ class DemoTest {
         assertNull(commands.claim(setOf(CommandKinds.APPROVE_RELEASE), run))
         assertTrue(commands.finish(claimed.id, "done", "release 1.0.1 goedgekeurd"))
         assertEquals("done", commands.recent().single().status)
+        commands.add(Command(UUID.randomUUID().toString(), CommandKinds.DEMO_RESET, null, null, "sim007", Instant.now()))
+        assertEquals("Demo opnieuw is already on its way.", live.refusal(CommandRequest(CommandKinds.DEMO_RESET)))
     }
 
     @Test

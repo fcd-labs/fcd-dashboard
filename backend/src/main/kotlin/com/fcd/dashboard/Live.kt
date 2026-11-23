@@ -202,10 +202,10 @@ class LiveViews(
             }
 
             CommandKinds.DEMO_RESET -> {
+                // Demo opnieuw always works (besluit sim007): the Pipeline stops a running run and drops older buttons.
                 when {
                     !controls.demoReset -> "Demo mode is off (Pipeline.spec.demo)."
-                    open.isNotEmpty() -> "The Pipeline is already busy with a command."
-                    running.isNotEmpty() -> "A pipeline is running; reset after it."
+                    open.any { it.kind == CommandKinds.DEMO_RESET } -> "Demo opnieuw is already on its way."
                     else -> null
                 }
             }

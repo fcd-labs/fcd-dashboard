@@ -23,6 +23,14 @@ export class LiveStore {
     (this.state()?.runs ?? []).some((r) => r.outcome === 'running' && r.environment === 'lokaal'),
   );
 
+  /** Demo opnieuw always works (the Pipeline stops a running run), unless a reset is already on its way. */
+  readonly resettable = computed(
+    () =>
+      !(this.state()?.commands ?? []).some(
+        (c) => c.kind === 'demo-reset' && (c.status === 'pending' || c.status === 'claimed'),
+      ),
+  );
+
   /** A button of the product owner; the Pipeline agent carries it out. */
   send(kind: CommandKind, extra: { run?: string; save?: boolean } = {}): void {
     this.refused.set(null);

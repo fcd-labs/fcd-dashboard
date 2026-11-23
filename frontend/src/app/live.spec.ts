@@ -280,9 +280,10 @@ describe('Live', () => {
     expect(buttons().querySelector<HTMLButtonElement>('[data-command="start-run"]')!.disabled).toBe(
       true,
     );
+    // Demo opnieuw always works, also while a pipeline runs (the Pipeline stops it).
     expect(
       buttons().querySelector<HTMLButtonElement>('[data-command="demo-reset"]')!.disabled,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('a waiting human gate has a button to approve the release of that run', () => {
@@ -292,6 +293,15 @@ describe('Live', () => {
     fixture.detectChanges();
     el.querySelector<HTMLButtonElement>('[data-command="approve-release"]')!.click();
     expect(api.sent).toEqual([{ kind: 'approve-release', extra: { run: 'orders-r1' } }]);
+  });
+
+  it('Demo opnieuw also while the run waits for the approval (the Pipeline stops it)', () => {
+    create();
+    const waiting = { kind: 'human', name: 'sim007', action: 'release goedkeuren' };
+    stream.onState(state([{ ...running, waitingFor: waiting }], demo));
+    fixture.detectChanges();
+    const reset = buttons().querySelector<HTMLButtonElement>('[data-command="demo-reset"]');
+    expect(reset?.disabled).toBe(false);
   });
 
   it('Demo opnieuw asks first, and can keep the run and the report', () => {
@@ -305,14 +315,14 @@ describe('Live', () => {
     expect(api.sent).toEqual([{ kind: 'demo-reset', extra: { save: true } }]);
   });
 
-  it('after the reset the button merges the patch; after the merge it is Demo opnieuw again', () => {
+  it('after the reset the menu has Patch mergen, and always Demo opnieuw', () => {
     create();
     const s = state([], demo);
     s.demo = { phase: 'start', unmerged: ['sk-demo patch/1.0.1'] };
     s.running = runningAt('1.0.0');
     stream.onState(s);
     fixture.detectChanges();
-    expect(buttons().querySelector('[data-command="demo-reset"]')).toBeNull();
+    expect(buttons().querySelector('[data-command="demo-reset"]')).not.toBeNull();
     const merge = buttons().querySelector<HTMLButtonElement>('[data-command="demo-merge"]')!;
     expect(flat(merge.textContent)).toBe('Patch mergen');
     expect(merge.getAttribute('title')).toBe('Merge sk-demo patch/1.0.1');

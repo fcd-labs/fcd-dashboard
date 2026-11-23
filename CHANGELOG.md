@@ -24,6 +24,9 @@ Alle wijzigingen per versie. Formaat: [Keep a Changelog](https://keepachangelog.
 - Contract van de logregel 0.5.0: optioneel `container` bij stappen en tests, `changelog` bij `service.deployed`, nieuwe soort `fcd-demo.reset`. Achterwaarts compatibel.
 - Contract frontend–backend 0.5.0: commando's, changelog, rijen per container, ontvangers van het key result.
 
+### Opgelost
+- **Demo opnieuw** werkt altijd, in elke fase (ook vóór de merge, tijdens een run en terwijl de Goedkeuring wacht); alleen niet twee keer tegelijk. De Pipeline stopt een lopende run.
+
 ## [0.4.0] - 2026-11-21
 
 ### Toegevoegd
